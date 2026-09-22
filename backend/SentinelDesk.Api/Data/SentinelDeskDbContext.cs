@@ -21,8 +21,23 @@ public sealed class SentinelDeskDbContext(DbContextOptions<SentinelDeskDbContext
             entity.Property(incident => incident.Description).HasMaxLength(4_000).IsRequired();
             entity.Property(incident => incident.Severity).HasConversion<string>().HasMaxLength(20).IsRequired();
             entity.Property(incident => incident.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+            entity.Property(incident => incident.IsArchived).IsRequired().HasDefaultValue(false);
+            entity.Property(incident => incident.ArchivedAt).HasColumnType("timestamp with time zone");
             entity.Property(incident => incident.CreatedAt).HasColumnType("timestamp with time zone").IsRequired();
             entity.Property(incident => incident.UpdatedAt).HasColumnType("timestamp with time zone").IsRequired();
+
+            // One incident has many security events; events survive if the incident is archived.
+            entity.HasMany(incident => incident.SecurityEvents)
+                  .WithOne(securityEvent => securityEvent.Incident)
+                  .HasForeignKey(securityEvent => securityEvent.IncidentId)
+                  .IsRequired(false)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            // Indexes to support the most common query filters.
+            entity.HasIndex(incident => incident.Status);
+            entity.HasIndex(incident => incident.Severity);
+            entity.HasIndex(incident => incident.CreatedAt);
+            entity.HasIndex(incident => incident.IsArchived);
         });
 
         modelBuilder.Entity<SecurityEvent>(entity =>
@@ -34,6 +49,9 @@ public sealed class SentinelDeskDbContext(DbContextOptions<SentinelDeskDbContext
             entity.Property(securityEvent => securityEvent.Description).HasMaxLength(4_000).IsRequired();
             entity.Property(securityEvent => securityEvent.RiskScore).IsRequired();
             entity.Property(securityEvent => securityEvent.DetectedAt).HasColumnType("timestamp with time zone").IsRequired();
+
+            entity.HasIndex(securityEvent => securityEvent.DetectedAt);
+            entity.HasIndex(securityEvent => securityEvent.IncidentId);
         });
     }
 }
