@@ -1,0 +1,22 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+
+# .NET tooling
+.vs/
+.vscode/
+TestResults/
+
+# JavaScript tooling and builds
+node_modules/
+dist/
+
+# Local configuration and secrets
+appsettings.Local.json
+.env
+.env.*
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
