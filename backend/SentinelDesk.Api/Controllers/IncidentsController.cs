@@ -1,15 +1,21 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SentinelDesk.Api.Contracts.Common;
 using SentinelDesk.Api.Contracts.Incidents;
+using SentinelDesk.Api.Contracts.RealTime;
 using SentinelDesk.Api.Data;
+using SentinelDesk.Api.Hubs;
 using SentinelDesk.Api.Models;
 
 namespace SentinelDesk.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public sealed class IncidentsController(SentinelDeskDbContext dbContext) : ControllerBase
+public sealed class IncidentsController(
+    SentinelDeskDbContext dbContext,
+    IHubContext<SecurityHub> hubContext,
+    ILogger<IncidentsController> logger) : ControllerBase
 {
     // Enforces the one-way status workflow: Open → Investigating → Contained → Resolved → Closed.
     // Closed is terminal — it has no entry here, so TryGetValue returns false.
@@ -111,6 +117,18 @@ public sealed class IncidentsController(SentinelDeskDbContext dbContext) : Contr
         dbContext.Incidents.Add(incident);
         await dbContext.SaveChangesAsync(cancellationToken);
 
+        await TryBroadcastAsync(
+            SecurityHubEvents.IncidentCreated,
+            new IncidentCreatedMessage(
+                incident.Id,
+                incident.Title,
+                incident.Description,
+                incident.Severity.ToString(),
+                incident.Status.ToString(),
+                incident.CreatedAt
+            ),
+            cancellationToken);
+
         return CreatedAtAction(nameof(GetById), new { incident.Id }, incident);
     }
 
@@ -138,6 +156,18 @@ public sealed class IncidentsController(SentinelDeskDbContext dbContext) : Contr
         incident.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        await TryBroadcastAsync(
+            SecurityHubEvents.IncidentUpdated,
+            new IncidentUpdatedMessage(
+                incident.Id,
+                incident.Title,
+                incident.Description,
+                incident.Severity.ToString(),
+                incident.UpdatedAt
+            ),
+            cancellationToken);
+
         return Ok(incident);
     }
 
@@ -187,10 +217,22 @@ public sealed class IncidentsController(SentinelDeskDbContext dbContext) : Contr
             });
         }
 
+        var previousStatus = incident.Status;
         incident.Status = request.NewStatus;
         incident.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        await TryBroadcastAsync(
+            SecurityHubEvents.IncidentStatusChanged,
+            new IncidentStatusChangedMessage(
+                incident.Id,
+                previousStatus.ToString(),
+                incident.Status.ToString(),
+                incident.UpdatedAt
+            ),
+            cancellationToken);
+
         return Ok(incident);
     }
 
@@ -214,7 +256,28 @@ public sealed class IncidentsController(SentinelDeskDbContext dbContext) : Contr
         incident.UpdatedAt = now;
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        await TryBroadcastAsync(
+            SecurityHubEvents.IncidentArchived,
+            new IncidentArchivedMessage(
+                incident.Id,
+                incident.ArchivedAt.Value
+            ),
+            cancellationToken);
+
         return NoContent();
     }
-}
 
+    private async Task TryBroadcastAsync(string eventName, object message, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await hubContext.Clients.All.SendAsync(eventName, message, cancellationToken);
+            logger.LogInformation("Broadcast real-time event '{EventName}' to connected clients", eventName);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to broadcast real-time event '{EventName}'. Database state remains authoritative", eventName);
+        }
+    }
+}

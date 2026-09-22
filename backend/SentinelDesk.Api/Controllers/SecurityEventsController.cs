@@ -1,14 +1,20 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using SentinelDesk.Api.Contracts.RealTime;
 using SentinelDesk.Api.Contracts.SecurityEvents;
 using SentinelDesk.Api.Data;
+using SentinelDesk.Api.Hubs;
 using SentinelDesk.Api.Models;
 
 namespace SentinelDesk.Api.Controllers;
 
 [ApiController]
 [Route("api/security-events")]
-public sealed class SecurityEventsController(SentinelDeskDbContext dbContext) : ControllerBase
+public sealed class SecurityEventsController(
+    SentinelDeskDbContext dbContext,
+    IHubContext<SecurityHub> hubContext,
+    ILogger<SecurityEventsController> logger) : ControllerBase
 {
     // -------------------------------------------------------------------------
     // GET /api/security-events
@@ -91,6 +97,19 @@ public sealed class SecurityEventsController(SentinelDeskDbContext dbContext) : 
         dbContext.SecurityEvents.Add(securityEvent);
         await dbContext.SaveChangesAsync(cancellationToken);
 
+        await TryBroadcastAsync(
+            SecurityHubEvents.SecurityEventCreated,
+            new SecurityEventCreatedMessage(
+                securityEvent.Id,
+                securityEvent.EventType,
+                securityEvent.SourceIp,
+                securityEvent.Description,
+                securityEvent.RiskScore,
+                securityEvent.DetectedAt,
+                securityEvent.IncidentId
+            ),
+            cancellationToken);
+
         return CreatedAtAction(nameof(GetById), new { securityEvent.Id }, securityEvent);
     }
 
@@ -144,6 +163,28 @@ public sealed class SecurityEventsController(SentinelDeskDbContext dbContext) : 
         securityEvent.IncidentId = incidentId;
         await dbContext.SaveChangesAsync(cancellationToken);
 
+        await TryBroadcastAsync(
+            SecurityHubEvents.SecurityEventLinked,
+            new SecurityEventLinkedMessage(
+                securityEvent.Id,
+                incidentId,
+                DateTime.UtcNow
+            ),
+            cancellationToken);
+
         return Ok(securityEvent);
+    }
+
+    private async Task TryBroadcastAsync(string eventName, object message, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await hubContext.Clients.All.SendAsync(eventName, message, cancellationToken);
+            logger.LogInformation("Broadcast real-time event '{EventName}' to connected clients", eventName);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to broadcast real-time event '{EventName}'. Database state remains authoritative", eventName);
+        }
     }
 }
