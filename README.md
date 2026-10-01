@@ -44,3 +44,24 @@ Invoke-RestMethod http://localhost:5043/api/health
 4. React dashboard and incident workflows
 5. SignalR real-time events
 6. Tests, documentation, and deployment polish
+
+
+## My Contribution
+
+**Role: Sole Developer / Full-Stack Developer**
+
+I designed and built **SentinelDesk independently as a full-stack project**. I was responsible for the frontend, backend API, database integration, real-time communication, application structure, and development workflow.
+
+My work includes:
+
+- ASP.NET Core Web API development with C# and .NET 10
+- PostgreSQL integration through Entity Framework Core and Npgsql
+- Incident models, contracts, controllers, and data access structure
+- SignalR-based real-time communication
+- React 19 + TypeScript frontend development
+- Typed REST API clients and frontend state handling
+- Incident creation, retrieval, updates, status transitions, and archival workflows
+- Responsive incident-management interface
+- Frontend/backend integration and local development setup
+
+This repository represents my work as the **sole developer responsible for both the frontend and backend implementation**.
