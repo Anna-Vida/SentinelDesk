@@ -5,6 +5,7 @@ import { IncidentDetail } from './components/IncidentDetail'
 import { IncidentForm } from './components/IncidentForm'
 import { Layout, type Section } from './components/Layout'
 import { useSecurityHub, type RealtimeEvent } from './hooks/useSecurityHub'
+import { AnalyticsPage } from './pages/AnalyticsPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { IncidentsPage } from './pages/IncidentsPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
@@ -49,7 +50,8 @@ export default function App() {
     {section === 'Dashboard' && <DashboardPage incidents={incidents} events={events} loading={loading} error={error} onRetry={loadData} onSelect={setSelected} onNewIncident={() => setCreating(true)} />}
     {section === 'Incidents' && <IncidentsPage revision={revision} onSelect={setSelected} onNewIncident={() => setCreating(true)} />}
     {section === 'Security Events' && <SecurityEventsPage events={events} loading={loading} error={error} onRetry={loadData} />}
-    {(section === 'Analytics' || section === 'Settings') && <PlaceholderPage title={section} />}
+    {section === 'Analytics' && <AnalyticsPage incidents={incidents} events={events} loading={loading} error={error} onRetry={loadData} />}
+    {section === 'Settings' && <PlaceholderPage title={section} />}
     {creating && <IncidentForm onClose={() => setCreating(false)} onCreated={(item) => { upsertIncident(item); setRevision((value) => value + 1) }} />}
     {selected && <IncidentDetail incident={selected} onClose={() => setSelected(null)} onChanged={(item) => { upsertIncident(item); setSelected(item); setRevision((value) => value + 1) }} onArchived={removeIncident} />}
     {toast && <div className="toast" role="status"><span>◉</span>{toast}</div>}
