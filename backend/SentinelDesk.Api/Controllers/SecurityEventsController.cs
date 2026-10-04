@@ -20,15 +20,25 @@ public sealed class SecurityEventsController(
     // GET /api/security-events
     // -------------------------------------------------------------------------
     [HttpGet]
-    [ProducesResponseType<IReadOnlyList<SecurityEvent>>(StatusCodes.Status200OK)]
-    public async Task<ActionResult<IReadOnlyList<SecurityEvent>>> GetAll(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAll([FromQuery] SecurityEventQueryParameters query, CancellationToken cancellationToken)
     {
-        var events = await dbContext.SecurityEvents
-            .AsNoTracking()
-            .OrderByDescending(se => se.DetectedAt)
-            .ToListAsync(cancellationToken);
-
-        return Ok(events);
+        var events = dbContext.SecurityEvents.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            var term = $"%{query.Search.Trim()}%";
+            events = events.Where(item => EF.Functions.ILike(item.EventType, term) || EF.Functions.ILike(item.SourceIp, term) || EF.Functions.ILike(item.Description, term));
+        }
+        if (query.MinRisk.HasValue) events = events.Where(item => item.RiskScore >= query.MinRisk);
+        if (query.UnlinkedOnly) events = events.Where(item => item.IncidentId == null);
+        if (query.IncidentId.HasValue) events = events.Where(item => item.IncidentId == query.IncidentId);
+        var total = await events.CountAsync(cancellationToken);
+        var items = await events.OrderByDescending(item => item.DetectedAt).ThenBy(item => item.Id)
+            .Skip((query.Page - 1) * query.PageSize).Take(query.PageSize).ToListAsync(cancellationToken);
+        return Ok(new SentinelDesk.Api.Contracts.Common.PagedResponse<SecurityEvent>
+        {
+            Items = items, Page = query.Page, PageSize = query.PageSize, TotalItems = total,
+            TotalPages = (int)Math.Ceiling(total / (double)query.PageSize)
+        });
     }
 
     // -------------------------------------------------------------------------
@@ -49,6 +59,7 @@ public sealed class SecurityEventsController(
     // -------------------------------------------------------------------------
     // POST /api/security-events
     // -------------------------------------------------------------------------
+    [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Write")]
     [HttpPost]
     [ProducesResponseType<SecurityEvent>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -57,6 +68,9 @@ public sealed class SecurityEventsController(
         CreateSecurityEventRequest request,
         CancellationToken cancellationToken)
     {
+        if (!System.Net.IPAddress.TryParse(request.SourceIp, out _))
+            return Problem(statusCode: 400, detail: "Source IP must be a valid IPv4 or IPv6 address.");
+
         // If an IncidentId was supplied, validate it exists and is not archived.
         if (request.IncidentId.HasValue)
         {
@@ -117,6 +131,7 @@ public sealed class SecurityEventsController(
     // PATCH /api/security-events/{eventId}/incident/{incidentId}
     // Links an existing security event to an existing, non-archived incident.
     // -------------------------------------------------------------------------
+    [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Write")]
     [HttpPatch("{eventId:guid}/incident/{incidentId:guid}")]
     [ProducesResponseType<SecurityEvent>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

@@ -18,5 +18,6 @@ public sealed class SecurityEvent
     public Guid? IncidentId { get; set; }
 
     /// <summary>Navigation property to the linked incident.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
     public Incident? Incident { get; set; }
 }

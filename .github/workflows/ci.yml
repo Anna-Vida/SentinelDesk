@@ -1,0 +1,64 @@
+name: Verify SentinelDesk
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: sentineldesk
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: sentineldesk_tests
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U sentineldesk -d sentineldesk_tests"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      TEST_DATABASE_URL: Host=localhost;Port=5432;Database=sentineldesk_tests;Username=sentineldesk;Password=ci-only-password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/SentinelDesk.Web/package-lock.json
+      - run: dotnet test SentinelDesk.slnx --configuration Release --logger trx
+      - run: dotnet tool restore
+      - name: Verify migration snapshot
+        run: dotnet ef migrations has-pending-model-changes --project backend/SentinelDesk.Api
+        env:
+          ConnectionStrings__DefaultConnection: ${{ env.TEST_DATABASE_URL }}
+      - run: npm ci
+        working-directory: frontend/SentinelDesk.Web
+      - run: npm run lint && npm run build
+        working-directory: frontend/SentinelDesk.Web
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend/SentinelDesk.Web
+      - name: Verify browser workflows with the real API
+        run: |
+          dotnet run --project backend/SentinelDesk.Api --no-launch-profile > /tmp/sentineldesk-api.log 2>&1 &
+          cd frontend/SentinelDesk.Web
+          npm run test:e2e
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          ASPNETCORE_URLS: http://localhost:5043
+          ConnectionStrings__DefaultConnection: ${{ env.TEST_DATABASE_URL }}
+          E2E_EMAIL: admin@example.test
+          E2E_PASSWORD: Test-Only-Password123!
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: verification-diagnostics
+          path: |
+            **/TestResults/*.trx
+            frontend/SentinelDesk.Web/test-results/
+            /tmp/sentineldesk-api.log

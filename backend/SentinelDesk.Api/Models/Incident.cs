@@ -23,5 +23,6 @@ public sealed class Incident
     public DateTime UpdatedAt { get; set; }
 
     /// <summary>Security events linked to this incident.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
     public ICollection<SecurityEvent> SecurityEvents { get; set; } = [];
 }

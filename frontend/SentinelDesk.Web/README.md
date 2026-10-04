@@ -1,20 +1,18 @@
 # SentinelDesk Web
 
-React and TypeScript security operations dashboard for the SentinelDesk API.
+React 19 + TypeScript + Vite frontend. See the repository [README](../../README.md) for database, account bootstrap, testing and deployment instructions.
 
-## Local development
+```sh
+npm ci
+npm run dev
+```
 
-1. Copy `.env.example` to `.env` and adjust `VITE_API_BASE_URL` if needed.
-2. Start the backend at `http://localhost:5043`.
-3. Install and run the frontend:
+The API must run on `http://localhost:5043`. Open `http://localhost:5173`; Vite proxies API and SignalR requests through the same origin.
 
-   ```bash
-   npm install
-   npm run dev
-   ```
+```sh
+npm run lint
+npm run build
+npm run test:e2e
+```
 
-The app runs at `http://localhost:5173`. Production assets can be checked with
-`npm run build`.
-
-The dashboard consumes the REST API and subscribes to `/hubs/security` for live
-incident and security-event updates. No polling is used.
+Browser tests require `E2E_EMAIL` and `E2E_PASSWORD` for a disposable test administrator account and a running API. No credentials are embedded in the frontend.

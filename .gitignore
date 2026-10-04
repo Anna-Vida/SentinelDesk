@@ -21,3 +21,8 @@ appsettings.Local.json
 # OS files
 .DS_Store
 Thumbs.db
+
+# Browser test artifacts
+playwright-report/
+test-results/
+*.tsbuildinfo

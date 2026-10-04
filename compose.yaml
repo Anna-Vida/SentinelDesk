@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: sentineldesk
+      POSTGRES_USER: sentineldesk
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentineldesk -d sentineldesk"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:5043:8080"
+    environment:
+      # Local-only HTTP profile. For public hosting use Production + HTTPS.
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=db;Database=sentineldesk;Username=sentineldesk;Password=${POSTGRES_PASSWORD}
+      Database__MigrateOnStartup: "true"
+      Auth__BootstrapAdmin: "true"
+      Auth__AdminEmail: ${ADMIN_EMAIL:?Set ADMIN_EMAIL in .env}
+      Auth__AdminPassword: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  database:

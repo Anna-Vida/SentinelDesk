@@ -63,6 +63,7 @@ public sealed class IncidentsController(
 
         var items = await queryable
             .OrderByDescending(i => i.CreatedAt)
+            .ThenBy(i => i.Id)
             .Skip((query.Page - 1) * query.PageSize)
             .Take(query.PageSize)
             .ToListAsync(cancellationToken);
@@ -95,6 +96,7 @@ public sealed class IncidentsController(
     // -------------------------------------------------------------------------
     // POST /api/incidents
     // -------------------------------------------------------------------------
+    [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Write")]
     [HttpPost]
     [ProducesResponseType<Incident>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -135,6 +137,7 @@ public sealed class IncidentsController(
     // -------------------------------------------------------------------------
     // PUT /api/incidents/{id}
     // -------------------------------------------------------------------------
+    [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Write")]
     [HttpPut("{id:guid}")]
     [ProducesResponseType<Incident>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -149,6 +152,8 @@ public sealed class IncidentsController(
 
         if (incident is null)
             return NotFound();
+
+        if (incident.IsArchived) return Problem(statusCode: 409, detail: "Archived incidents are read-only.");
 
         incident.Title = request.Title.Trim();
         incident.Description = request.Description.Trim();
@@ -174,6 +179,7 @@ public sealed class IncidentsController(
     // -------------------------------------------------------------------------
     // PATCH /api/incidents/{id}/status
     // -------------------------------------------------------------------------
+    [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Write")]
     [HttpPatch("{id:guid}/status")]
     [ProducesResponseType<Incident>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -239,6 +245,7 @@ public sealed class IncidentsController(
     // -------------------------------------------------------------------------
     // DELETE /api/incidents/{id}  — soft archive, never physical delete
     // -------------------------------------------------------------------------
+    [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Write")]
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -249,6 +256,8 @@ public sealed class IncidentsController(
 
         if (incident is null)
             return NotFound();
+
+        if (incident.IsArchived) return NoContent();
 
         var now = DateTime.UtcNow;
         incident.IsArchived = true;

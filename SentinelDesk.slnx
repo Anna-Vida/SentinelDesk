@@ -2,4 +2,7 @@
   <Folder Name="/backend/">
     <Project Path="backend/SentinelDesk.Api/SentinelDesk.Api.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SentinelDesk.Api.Tests/SentinelDesk.Api.Tests.csproj" />
+  </Folder>
 </Solution>
