@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using SentinelDesk.Api.Models;
 
 namespace SentinelDesk.Api.Data;
 
-public sealed class SentinelDeskDbContext(DbContextOptions<SentinelDeskDbContext> options) : DbContext(options)
+public sealed class SentinelDeskDbContext(DbContextOptions<SentinelDeskDbContext> options) : IdentityDbContext<IdentityUser>(options)
 {
     public DbSet<Incident> Incidents => Set<Incident>();
 

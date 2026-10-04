@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace SentinelDesk.Api.Controllers;
 
+[Microsoft.AspNetCore.Authorization.AllowAnonymous]
 [ApiController]
 [Route("api/[controller]")]
 public sealed class HealthController : ControllerBase

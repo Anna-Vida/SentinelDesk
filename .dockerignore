@@ -1,0 +1,11 @@
+**/node_modules
+**/bin
+**/obj
+**/dist
+**/TestResults
+**/playwright-report
+**/test-results
+.git
+.env
+.env.*
+**/appsettings.Local.json
