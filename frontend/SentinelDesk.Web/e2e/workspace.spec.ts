@@ -8,7 +8,12 @@ async function signIn(page: Page, user = email!, pass = password!) {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Security posture at a glance' })).toBeVisible()
 }
-test.beforeAll(() => { if (!email || !password) throw new Error('Set E2E_EMAIL and E2E_PASSWORD for a disposable test administrator account.') })
+test.beforeAll(async ({ request }) => {
+  if (!email || !password) throw new Error('Set E2E_EMAIL and E2E_PASSWORD for a disposable test administrator account.')
+  await expect.poll(async () => {
+    try { return (await request.get('/api/health')).status() } catch { return 0 }
+  }, { timeout: 30000, message: 'Wait for the API to start' }).toBe(200)
+})
 
 test('manage an incident and evidence, then view analytics and sign out', async ({ page, browser }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message))
@@ -65,7 +70,7 @@ test('manage an incident and evidence, then view analytics and sign out', async 
   await page.getByRole('button', { name: 'Archive', exact: true }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await page.getByRole('button', { name: 'Analytics', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Incident status', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Incident status distribution', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Settings', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Workspace members' })).toBeVisible()
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()

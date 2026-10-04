@@ -97,7 +97,7 @@ public sealed class WorkflowTests : IClassFixture<ApiFactory>, IAsyncLifetime
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/incidents")).StatusCode);
     }
     [Fact]
-    public async Task DashboardCountsMoreThanOnePageAndExcludesArchivedAndResolvedCritical()
+    public async Task DashboardCountsMoreThanOnePage()
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<SentinelDeskDbContext>();
@@ -111,16 +111,24 @@ public sealed class WorkflowTests : IClassFixture<ApiFactory>, IAsyncLifetime
         Assert.Equal(before + 105, count);
         Assert.Equal(6, summary.GetProperty("recentIncidents").GetArrayLength());
     }
-    [Fact]
+    [PostgresFact]
     public async Task PostgresSearchAndMigrationAreCompatible()
     {
         // CI sets TEST_DATABASE_URL to a disposable PostgreSQL service.
-        if (factory.Postgres is null) return;
         using var client = await Login("analyst"); await CreateIncident(client);
         var result = await client.GetFromJsonAsync<JsonElement>("/api/incidents?search=SUSPICIOUS");
         Assert.True(result.GetProperty("totalItems").GetInt32() > 0);
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<SentinelDeskDbContext>();
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
+    }
+}
+
+public sealed class PostgresFactAttribute : FactAttribute
+{
+    public PostgresFactAttribute()
+    {
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("TEST_DATABASE_URL")))
+            Skip = "Set TEST_DATABASE_URL to a disposable PostgreSQL database.";
     }
 }
