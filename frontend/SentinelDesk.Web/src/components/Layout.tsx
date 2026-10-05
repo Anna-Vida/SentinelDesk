@@ -1,11 +1,12 @@
 import { UserRole, type AuthUser, type ConnectionState } from '../types'
 
-export type Section = 'Dashboard' | 'Incidents' | 'Security Events' | 'Analytics' | 'Live Test' | 'Users'
+export type Section = 'Dashboard' | 'Incidents' | 'Security Events' | 'Threat Intel' | 'Analytics' | 'Live Test' | 'Users'
 
 const baseNav: Array<{ name: Section; icon: string }> = [
   { name: 'Dashboard', icon: '⌁' },
   { name: 'Incidents', icon: '△' },
   { name: 'Security Events', icon: '◎' },
+  { name: 'Threat Intel', icon: '◆' },
   { name: 'Analytics', icon: '⌗' },
 ]
 

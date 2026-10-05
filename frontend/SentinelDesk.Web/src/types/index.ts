@@ -101,3 +101,30 @@ export interface TestScenarioResult {
   events: SecurityEvent[]
   message: string
 }
+
+
+export interface ThreatIntelItem {
+  cveId: string
+  vendorProject: string
+  product: string
+  vulnerabilityName: string
+  dateAdded: string
+  shortDescription: string
+  requiredAction: string
+  dueDate: string
+  knownRansomwareCampaignUse: string
+  notes: string | null
+  sourceUrl: string
+}
+
+export interface ThreatIntelResponse {
+  source: string
+  sourceUrl: string
+  catalogVersion: string
+  dateReleased: string
+  totalCount: number
+  addedLast30Days: number
+  knownRansomwareCount: number
+  latestDateAdded: string | null
+  items: ThreatIntelItem[]
+}

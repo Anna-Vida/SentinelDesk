@@ -23,6 +23,12 @@ builder.Services.AddProblemDetails();
 builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddSignalR();
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient("CisaKev", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(20);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("SentinelDesk/1.0");
+});
 
 var configuredOrigins = (builder.Configuration["Cors:AllowedOrigins"] ?? string.Empty)
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);

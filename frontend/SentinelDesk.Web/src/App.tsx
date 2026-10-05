@@ -12,6 +12,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { IncidentsPage } from './pages/IncidentsPage'
 import { LiveTestPage } from './pages/LiveTestPage'
 import { SecurityEventsPage } from './pages/SecurityEventsPage'
+import { ThreatIntelPage } from './pages/ThreatIntelPage'
 import { UsersPage } from './pages/UsersPage'
 import { UserRole, type AuthSession, type Incident, type SecurityEvent } from './types'
 
@@ -74,6 +75,7 @@ export default function App() {
     {section === 'Dashboard' && <DashboardPage incidents={incidents} events={events} loading={loading} error={error} onRetry={loadData} onSelect={setSelected} onNewIncident={() => setCreating(true)} canManage={canManage} />}
     {section === 'Incidents' && <IncidentsPage revision={revision} onSelect={setSelected} onNewIncident={() => setCreating(true)} canManage={canManage} />}
     {section === 'Security Events' && <SecurityEventsPage events={events} incidents={incidents} loading={loading} error={error} onRetry={loadData} onCreated={upsertSecurityEvent} onLinked={upsertSecurityEvent} canManage={canManage} />}
+    {section === 'Threat Intel' && <ThreatIntelPage />}
     {section === 'Analytics' && <AnalyticsPage incidents={incidents} events={events} loading={loading} error={error} onRetry={loadData} />}
     {section === 'Live Test' && canManage && <LiveTestPage connection={connection} onCompleted={loadData} canClear={canArchive} />}
     {section === 'Users' && session.user.role === UserRole.Admin && <UsersPage />}

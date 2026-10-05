@@ -57,6 +57,7 @@ Connected browser sessions update without polling or a page refresh.
 - Operational analytics for status, severity, risk, and linkage
 - CSV export for incident and telemetry reporting
 - Live security simulation lab for phishing, brute-force, and malware scenarios
+- Real external threat intelligence from the CISA Known Exploited Vulnerabilities (KEV) catalog
 - Responsive dark SOC interface with loading, error, and empty states
 
 ## Repository structure
@@ -209,6 +210,8 @@ POST   /api/incidents
 PUT    /api/incidents/{id}
 PATCH  /api/incidents/{id}/status
 DELETE /api/incidents/{id}
+
+GET    /api/threat-intel/cisa-kev
 
 GET    /api/security-events
 GET    /api/security-events/{id}
