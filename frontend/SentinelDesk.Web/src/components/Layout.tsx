@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ChangeEvent, type ReactNode } from 'react'
 import { UserRole, type AuthUser, type ConnectionState } from '../types'
 
 export type Section = 'Dashboard' | 'Incidents' | 'Security Events' | 'Threat Intel' | 'Analytics' | 'Windows Agent' | 'Users'
@@ -28,7 +28,7 @@ export function Layout({ section, onNavigate, connection, user, onLogout, childr
   connection: ConnectionState
   user: AuthUser
   onLogout: () => void
-  children: React.ReactNode
+  children: ReactNode
 }) {
   const [query, setQuery] = useState('')
   const initials = user.displayName
@@ -84,7 +84,7 @@ export function Layout({ section, onNavigate, connection, user, onLogout, childr
         <span aria-hidden="true">⌕</span>
         <input
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value)}
           placeholder="Search navigation..."
           aria-label="Search navigation"
         />
