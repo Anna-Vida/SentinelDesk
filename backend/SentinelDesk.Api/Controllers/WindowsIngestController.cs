@@ -231,7 +231,11 @@ public sealed class WindowsIngestController(
             });
         }
 
-        var apiUrl = $"{Request.Scheme}://{Request.Host}";
+        var configuredPublicUrl = configuration["Ingestion:PublicApiUrl"];
+        var apiUrl = string.IsNullOrWhiteSpace(configuredPublicUrl)
+            ? $"{Request.Scheme}://{Request.Host}"
+            : configuredPublicUrl.TrimEnd('/');
+
         return Ok(new WindowsCollectorSetupResponse(
             apiUrl,
             apiKey,

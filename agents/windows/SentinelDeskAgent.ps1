@@ -188,8 +188,21 @@ function Send-Batch([array]$Events) {
     }
 
     $endpoint = "$($ApiUrl.TrimEnd('/'))/api/ingest/windows"
-    $result = Invoke-RestMethod -Method Post -Uri $endpoint -Headers $headers -ContentType 'application/json' -Body $body
-    Write-Host "$(Get-Date -Format T) - Sent $($result.acceptedEvents) real Windows events; created $($result.createdIncidents) incident(s)."
+    $result = Invoke-RestMethod -Method Post -Uri $endpoint -Headers $headers -ContentType 'application/json' -Body $body -ErrorAction Stop
+
+    if ($null -eq $result) {
+        throw 'SentinelDesk API returned an empty response.'
+    }
+
+    $acceptedEvents = $result.PSObject.Properties['acceptedEvents']
+    $createdIncidents = $result.PSObject.Properties['createdIncidents']
+
+    if ($null -eq $acceptedEvents -or $null -eq $createdIncidents) {
+        $responseText = $result | ConvertTo-Json -Depth 4 -Compress
+        throw "Unexpected SentinelDesk API response: $responseText"
+    }
+
+    Write-Host "$(Get-Date -Format T) - Sent $($acceptedEvents.Value) real Windows events; created $($createdIncidents.Value) incident(s)."
 }
 
 if ($EnableAudit) {
