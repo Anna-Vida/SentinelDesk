@@ -1,5 +1,6 @@
 import { EmptyState, ErrorState, LoadingState } from '../components/States'
 import { IncidentSeverity, IncidentStatus, type Incident, type SecurityEvent } from '../types'
+import { downloadCsv } from '../utils/csv'
 
 const statusOrder = Object.values(IncidentStatus)
 const severityOrder = Object.values(IncidentSeverity)
@@ -57,9 +58,39 @@ export function AnalyticsPage({ incidents, events, loading, error, onRetry }: {
     ['Event linkage', `${percent(linkedEvents, events.length)}%`, 'Events linked to incidents'],
   ]
 
+  const exportIncidents = () => downloadCsv('sentineldesk-incidents.csv', [
+    ['Id', 'Title', 'Description', 'Severity', 'Status', 'Created At', 'Updated At'],
+    ...incidents.map((incident) => [
+      incident.id,
+      incident.title,
+      incident.description,
+      incident.severity,
+      incident.status,
+      incident.createdAt,
+      incident.updatedAt,
+    ]),
+  ])
+
+  const exportEvents = () => downloadCsv('sentineldesk-security-events.csv', [
+    ['Id', 'Event Type', 'Source IP', 'Description', 'Risk Score', 'Detected At', 'Incident Id'],
+    ...events.map((event) => [
+      event.id,
+      event.eventType,
+      event.sourceIp,
+      event.description,
+      event.riskScore,
+      event.detectedAt,
+      event.incidentId,
+    ]),
+  ])
+
   return <>
     <section className="welcome compact">
       <div><span className="eyebrow">SOC ANALYTICS</span><h2>Operational intelligence</h2><p>Live response metrics calculated from current SentinelDesk data.</p></div>
+      <div className="report-actions">
+        <button className="button ghost" onClick={exportIncidents} disabled={!incidents.length}>Export incidents</button>
+        <button className="button ghost" onClick={exportEvents} disabled={!events.length}>Export telemetry</button>
+      </div>
     </section>
 
     <section className="stats-grid" aria-label="Analytics metrics">

@@ -1,1 +1,0 @@
-export function PlaceholderPage({ title }: { title: string }) { return <section className="panel placeholder"><span className="brand-shield">⌁</span><h2>{title} is coming next</h2><p>This workspace is reserved for a future SentinelDesk phase.</p></section> }

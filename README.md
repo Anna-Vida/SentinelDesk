@@ -55,6 +55,7 @@ Connected browser sessions update without polling or a page refresh.
 - Searchable/filterable incident management
 - Security-event creation and correlation
 - Operational analytics for status, severity, risk, and linkage
+- CSV export for incident and telemetry reporting
 - Responsive dark SOC interface with loading, error, and empty states
 
 ## Repository structure
@@ -82,6 +83,10 @@ SentinelDesk/
     └── workflows/
         └── ci.yml
 ```
+
+## Architecture
+
+See [`docs/architecture.md`](docs/architecture.md) for the system diagram, data model, authentication/RBAC design, real-time flow, and deployment configuration.
 
 ## Local setup
 

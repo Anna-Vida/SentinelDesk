@@ -29,3 +29,7 @@
 
 /* Secure workspace onboarding and user administration */
 .auth-checking{display:flex;align-items:center;gap:12px;margin-top:34px;color:var(--muted);font-size:12px}.auth-checking .spinner{flex:0 0 auto}.auth-help{margin:18px 0 0;color:var(--muted);font-size:11px;line-height:1.5;max-width:430px}.role-badge{display:inline-block;padding:4px 8px;border-radius:4px;border:1px solid var(--line);font:9px ui-monospace,monospace;text-transform:uppercase}.role-admin{color:#ffd36a;border-color:#665526;background:#2c2917}.role-analyst{color:#7dd3fc;border-color:#275a73;background:#122d3d}.role-viewer{color:#b4c5d4;border-color:#40556a;background:#1a2836}
+
+
+/* Analytics reporting */
+.report-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
