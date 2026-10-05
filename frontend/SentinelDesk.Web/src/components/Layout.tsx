@@ -1,4 +1,3 @@
-import { useState, type ChangeEvent, type ReactNode } from 'react'
 import { UserRole, type AuthUser, type ConnectionState } from '../types'
 
 export type Section = 'Dashboard' | 'Incidents' | 'Security Events' | 'Threat Intel' | 'Analytics' | 'Windows Agent' | 'Users'
@@ -28,9 +27,8 @@ export function Layout({ section, onNavigate, connection, user, onLogout, childr
   connection: ConnectionState
   user: AuthUser
   onLogout: () => void
-  children: ReactNode
+  children: React.ReactNode
 }) {
-  const [query, setQuery] = useState('')
   const initials = user.displayName
     .split(/\s+/)
     .filter(Boolean)
@@ -38,17 +36,6 @@ export function Layout({ section, onNavigate, connection, user, onLogout, childr
     .map((part) => part[0])
     .join('')
     .toUpperCase() || 'SO'
-
-  const filterItems = (items: NavItem[]) => {
-    const term = query.trim().toLowerCase()
-    if (!term) return items
-    return items.filter((item) => item.name.toLowerCase().includes(term))
-  }
-
-  const visibleMonitoring = filterItems(monitoringNav)
-  const visibleAdministration = user.role === UserRole.Admin
-    ? filterItems(administrationNav)
-    : []
 
   const renderItem = (item: NavItem) => {
     const active = section === item.name
@@ -75,39 +62,27 @@ export function Layout({ section, onNavigate, connection, user, onLogout, childr
             <small>SECURITY OPERATIONS</small>
           </div>
         </div>
-        <span className="sidebar-brand-status" title={connection} aria-label={`Realtime status: ${connection}`}>
+        <span className="sidebar-brand-status" title={connection}>
           <i className={connection.toLowerCase()} />
         </span>
       </div>
 
-      <label className="sidebar-search">
-        <span aria-hidden="true">⌕</span>
-        <input
-          value={query}
-          onChange={(event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value)}
-          placeholder="Search navigation..."
-          aria-label="Search navigation"
-        />
-        {query && <button type="button" onClick={() => setQuery('')} aria-label="Clear navigation search">×</button>}
-      </label>
+      <div className="sidebar-search sidebar-search-static" aria-hidden="true">
+        <span>⌕</span>
+        <div>Search navigation...</div>
+      </div>
 
       <div className="sidebar-scroll">
         <nav className="sidebar-nav" aria-label="Primary navigation">
-          <section className="sidebar-nav-group">
+          <div className="sidebar-nav-group">
             <span className="sidebar-group-label">Monitoring</span>
-            <div className="sidebar-nav-list">
-              {visibleMonitoring.map(renderItem)}
-              {!visibleMonitoring.length && <span className="sidebar-empty-search">No monitoring pages match.</span>}
-            </div>
-          </section>
+            <div className="sidebar-nav-list">{monitoringNav.map(renderItem)}</div>
+          </div>
 
-          {user.role === UserRole.Admin && <section className="sidebar-nav-group">
+          {user.role === UserRole.Admin && <div className="sidebar-nav-group">
             <span className="sidebar-group-label">Administration</span>
-            <div className="sidebar-nav-list">
-              {visibleAdministration.map(renderItem)}
-              {!visibleAdministration.length && <span className="sidebar-empty-search">No admin pages match.</span>}
-            </div>
-          </section>
+            <div className="sidebar-nav-list">{administrationNav.map(renderItem)}</div>
+          </div>}
         </nav>
 
         <div className="sidebar-live-card">
@@ -127,7 +102,7 @@ export function Layout({ section, onNavigate, connection, user, onLogout, childr
         <span className="avatar">{initials}</span>
         <div className="user-meta">
           <strong>{user.displayName}</strong>
-          <small>{user.email || user.role}</small>
+          <small>{user.email}</small>
           <span className="sidebar-role">{user.role}</span>
         </div>
         <button className="logout-button" onClick={onLogout} title="Sign out" aria-label="Sign out">↗</button>
