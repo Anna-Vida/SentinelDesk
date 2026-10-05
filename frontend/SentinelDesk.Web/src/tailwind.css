@@ -208,8 +208,8 @@
   .collector-status-body > div { @apply flex justify-between gap-5 border-b border-slate-800/80 pb-3 last:border-b-0 last:pb-0; }
   .collector-status-body span { @apply text-[11px] text-slate-500; }
   .collector-status-body strong { @apply text-right font-mono text-[11px] text-slate-200; }
-  .collector-ok { @apply text-emerald-300 !important; }
-  .collector-bad { @apply text-rose-300 !important; }
+  .collector-ok { @apply text-emerald-300; }
+  .collector-bad { @apply text-rose-300; }
   .collector-source-list { @apply grid gap-3 px-5 py-4; }
   .collector-source-list > div { @apply flex items-center gap-3; }
   .collector-source-list code { @apply min-w-12 rounded-lg border border-cyan-400/20 bg-cyan-400/[0.05] px-2 py-1.5 text-center; }
