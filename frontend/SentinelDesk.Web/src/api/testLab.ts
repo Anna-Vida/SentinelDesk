@@ -8,3 +8,8 @@ export const runTestScenario = (scenario: TestScenarioName) =>
   apiRequest<TestScenarioResult>(`/api/test-lab/scenarios/${scenario}`, {
     method: 'POST',
   })
+
+export const clearTestData = () =>
+  apiRequest<{ deletedIncidents: number; deletedEvents: number }>('/api/test-lab/data', {
+    method: 'DELETE',
+  })

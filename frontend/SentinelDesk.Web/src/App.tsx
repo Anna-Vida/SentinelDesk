@@ -75,7 +75,7 @@ export default function App() {
     {section === 'Incidents' && <IncidentsPage revision={revision} onSelect={setSelected} onNewIncident={() => setCreating(true)} canManage={canManage} />}
     {section === 'Security Events' && <SecurityEventsPage events={events} incidents={incidents} loading={loading} error={error} onRetry={loadData} onCreated={upsertSecurityEvent} onLinked={upsertSecurityEvent} canManage={canManage} />}
     {section === 'Analytics' && <AnalyticsPage incidents={incidents} events={events} loading={loading} error={error} onRetry={loadData} />}
-    {section === 'Live Test' && canManage && <LiveTestPage connection={connection} onCompleted={loadData} />}
+    {section === 'Live Test' && canManage && <LiveTestPage connection={connection} onCompleted={loadData} canClear={canArchive} />}
     {section === 'Users' && session.user.role === UserRole.Admin && <UsersPage />}
     {canManage && creating && <IncidentForm onClose={() => setCreating(false)} onCreated={(item) => { upsertIncident(item); setRevision((value) => value + 1) }} />}
     {selected && <IncidentDetail incident={selected} onClose={() => setSelected(null)} onChanged={(item) => { upsertIncident(item); setSelected(item); setRevision((value) => value + 1) }} onArchived={removeIncident} canManage={canManage} canArchive={canArchive} />}

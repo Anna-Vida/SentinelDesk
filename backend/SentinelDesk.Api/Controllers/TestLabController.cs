@@ -17,6 +17,8 @@ public sealed class TestLabController(
     SentinelDeskDbContext dbContext,
     IHubContext<SecurityHub> hubContext) : ControllerBase
 {
+    private const string TestTitlePrefix = "[LIVE TEST]";
+
     [HttpGet("status")]
     public async Task<ActionResult<TestLabStatusResponse>> GetStatus(CancellationToken cancellationToken)
     {
@@ -52,7 +54,7 @@ public sealed class TestLabController(
         var incident = new Incident
         {
             Id = Guid.NewGuid(),
-            Title = $"[LIVE TEST] {definition.Title}",
+            Title = $"{TestTitlePrefix} {definition.Title}",
             Description = definition.Description,
             Severity = definition.Severity,
             Status = IncidentStatus.Open,
@@ -104,10 +106,65 @@ public sealed class TestLabController(
 
         return Ok(new TestScenarioResponse(
             scenario,
-            incident,
-            events,
+            ToIncidentResponse(incident),
+            events.Select(ToEventResponse).ToList(),
             "Scenario created in the live database and broadcast to connected SentinelDesk clients."));
     }
+
+    [Authorize(Roles = RoleNames.Admin)]
+    [HttpDelete("data")]
+    public async Task<ActionResult<TestDataClearResponse>> ClearTestData(CancellationToken cancellationToken)
+    {
+        var testIncidentIds = await dbContext.Incidents
+            .Where(incident => incident.Title.StartsWith(TestTitlePrefix))
+            .Select(incident => incident.Id)
+            .ToListAsync(cancellationToken);
+
+        if (testIncidentIds.Count == 0)
+            return Ok(new TestDataClearResponse(0, 0));
+
+        var deletedEvents = await dbContext.SecurityEvents
+            .Where(securityEvent =>
+                securityEvent.IncidentId.HasValue &&
+                testIncidentIds.Contains(securityEvent.IncidentId.Value))
+            .ExecuteDeleteAsync(cancellationToken);
+
+        var deletedIncidents = await dbContext.Incidents
+            .Where(incident => testIncidentIds.Contains(incident.Id))
+            .ExecuteDeleteAsync(cancellationToken);
+
+        foreach (var incidentId in testIncidentIds)
+        {
+            await hubContext.Clients.All.SendAsync(
+                SecurityHubEvents.IncidentArchived,
+                new IncidentArchivedMessage(incidentId, DateTime.UtcNow),
+                cancellationToken);
+        }
+
+        return Ok(new TestDataClearResponse(deletedIncidents, deletedEvents));
+    }
+
+    private static TestIncidentResponse ToIncidentResponse(Incident incident) =>
+        new(
+            incident.Id,
+            incident.Title,
+            incident.Description,
+            incident.Severity.ToString(),
+            incident.Status.ToString(),
+            incident.IsArchived,
+            incident.ArchivedAt,
+            incident.CreatedAt,
+            incident.UpdatedAt);
+
+    private static TestSecurityEventResponse ToEventResponse(SecurityEvent securityEvent) =>
+        new(
+            securityEvent.Id,
+            securityEvent.EventType,
+            securityEvent.SourceIp,
+            securityEvent.Description,
+            securityEvent.RiskScore,
+            securityEvent.DetectedAt,
+            securityEvent.IncidentId);
 
     private static ScenarioDefinition? GetScenario(string scenario) =>
         scenario.Trim().ToLowerInvariant() switch
@@ -161,8 +218,32 @@ public sealed record TestLabStatusResponse(
     int SecurityEvents,
     DateTime CheckedAt);
 
+public sealed record TestIncidentResponse(
+    Guid Id,
+    string Title,
+    string Description,
+    string Severity,
+    string Status,
+    bool IsArchived,
+    DateTime? ArchivedAt,
+    DateTime CreatedAt,
+    DateTime UpdatedAt);
+
+public sealed record TestSecurityEventResponse(
+    Guid Id,
+    string EventType,
+    string SourceIp,
+    string Description,
+    int RiskScore,
+    DateTime DetectedAt,
+    Guid? IncidentId);
+
 public sealed record TestScenarioResponse(
     string Scenario,
-    Incident Incident,
-    IReadOnlyList<SecurityEvent> Events,
+    TestIncidentResponse Incident,
+    IReadOnlyList<TestSecurityEventResponse> Events,
     string Message);
+
+public sealed record TestDataClearResponse(
+    int DeletedIncidents,
+    int DeletedEvents);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getTestLabStatus, runTestScenario } from '../api/testLab'
+import { clearTestData, getTestLabStatus, runTestScenario } from '../api/testLab'
 import type { ConnectionState, TestLabStatus, TestScenarioName, TestScenarioResult } from '../types'
 
 const scenarios: Array<{
@@ -32,14 +32,17 @@ const scenarios: Array<{
   },
 ]
 
-export function LiveTestPage({ connection, onCompleted }: {
+export function LiveTestPage({ connection, onCompleted, canClear }: {
   connection: ConnectionState
   onCompleted: () => void
+  canClear: boolean
 }) {
   const [status, setStatus] = useState<TestLabStatus | null>(null)
   const [running, setRunning] = useState<TestScenarioName | null>(null)
   const [result, setResult] = useState<TestScenarioResult | null>(null)
   const [error, setError] = useState('')
+  const [clearing, setClearing] = useState(false)
+  const [clearMessage, setClearMessage] = useState('')
 
   const refreshStatus = () => {
     getTestLabStatus()
@@ -66,6 +69,26 @@ export function LiveTestPage({ connection, onCompleted }: {
     }
   }
 
+  const clear = async () => {
+    if (!window.confirm('Remove all [LIVE TEST] incidents and their linked telemetry?')) return
+
+    setClearing(true)
+    setError('')
+    setClearMessage('')
+
+    try {
+      const deleted = await clearTestData()
+      setResult(null)
+      setClearMessage(`Removed ${deleted.deletedIncidents} test incidents and ${deleted.deletedEvents} test events.`)
+      refreshStatus()
+      onCompleted()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to clear test data')
+    } finally {
+      setClearing(false)
+    }
+  }
+
   return <>
     <section className="welcome compact">
       <div>
@@ -73,6 +96,7 @@ export function LiveTestPage({ connection, onCompleted }: {
         <h2>Security simulation lab</h2>
         <p>Generate real incidents and telemetry in the production database to verify the complete workflow.</p>
       </div>
+      {canClear && <button className="button danger" disabled={clearing || Boolean(running)} onClick={clear}>{clearing ? 'Clearing…' : 'Clear test data'}</button>}
     </section>
 
     <section className="live-test-health">
@@ -113,6 +137,7 @@ export function LiveTestPage({ connection, onCompleted }: {
     </section>
 
     {error && <div className="test-result error"><strong>Simulation failed</strong><span>{error}</span></div>}
+    {clearMessage && <div className="test-result neutral"><strong>Test data cleared</strong><span>{clearMessage}</span></div>}
     {result && <div className="test-result success">
       <strong>Live test created successfully</strong>
       <span>{result.incident.title}</span>
