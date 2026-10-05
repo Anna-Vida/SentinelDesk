@@ -1,15 +1,6 @@
-@import "tailwindcss";
-
-@theme {
-  --color-sd-bg: #07111f;
-  --color-sd-panel: #0c1929;
-  --color-sd-line: #1d3044;
-  --color-sd-muted: #7890a7;
-  --color-sd-cyan: #2dd4bf;
-  --color-sd-blue: #38bdf8;
-  --color-sd-red: #fb7185;
-  --color-sd-amber: #fbbf24;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @layer base {
   * { box-sizing: border-box; }
@@ -40,7 +31,7 @@
     clip-path: polygon(50% 0,95% 18%,87% 76%,50% 100%,13% 76%,5% 18%);
   }
 
-  .button { @apply inline-flex items-center justify-center rounded-lg border border-slate-700 bg-slate-900/55 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-slate-600 hover:bg-slate-800/80 disabled:pointer-events-none disabled:opacity-45; }
+  .button { @apply inline-flex items-center justify-center rounded-lg border border-slate-700 bg-slate-900/55 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-slate-600 hover:bg-slate-800/80 disabled:pointer-events-none disabled:opacity-50; }
   .button.primary { @apply border-cyan-300 bg-cyan-300 text-slate-950 hover:border-cyan-200 hover:bg-cyan-200; }
   .button.ghost { @apply bg-transparent; }
   .button.danger { @apply border-rose-400/30 bg-rose-400/5 text-rose-300 hover:bg-rose-400/10; }
@@ -51,7 +42,7 @@
   .welcome p { @apply m-0 text-sm text-slate-500; }
   .welcome.compact { @apply mb-5; }
 
-  .panel, .stat-card { @apply rounded-xl border border-slate-800/90 bg-slate-900/45 shadow-[0_12px_30px_rgba(0,0,0,.08)]; }
+  .panel, .stat-card { @apply rounded-xl border border-slate-800/90 bg-slate-900/50; box-shadow: 0 12px 30px rgba(0,0,0,.08); }
   .panel { @apply overflow-hidden; }
   .panel-head { @apply border-b border-slate-800/80 px-5 py-4; }
   .panel-head h3 { @apply mt-1.5 text-sm font-semibold text-slate-100; }
@@ -65,7 +56,7 @@
   .tone-2 { @apply bg-amber-400/10 text-amber-300; }
   .tone-3 { @apply bg-emerald-400/10 text-emerald-300; }
 
-  .dashboard-grid { @apply grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,.8fr)]; }
+  .dashboard-grid { @apply grid grid-cols-1 gap-5; }
 
   .table-wrap { @apply overflow-x-auto; }
   .title-link { @apply border-0 bg-transparent p-0 text-left font-semibold text-slate-100 hover:text-cyan-300; }
@@ -178,15 +169,15 @@
   .role-admin { @apply border-amber-400/25 bg-amber-400/10 text-amber-300; }
   .role-analyst { @apply border-sky-400/25 bg-sky-400/10 text-sky-300; }
   .role-viewer { @apply border-slate-600 bg-slate-700/20 text-slate-300; }
-  .pending-user { @apply bg-amber-400/[0.03]; }
+  .pending-user { @apply bg-amber-400/5; }
   .approval-actions { @apply flex min-w-72 justify-end gap-1.5; }
 
-  .threat-source-bar { @apply mb-4 flex items-center justify-between gap-4 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.04] px-4 py-3; }
+  .threat-source-bar { @apply mb-4 flex items-center justify-between gap-4 rounded-xl border border-cyan-400/20 bg-cyan-400/5 px-4 py-3; }
   .threat-source-bar > div { @apply flex min-w-0 items-center gap-2; }
   .threat-source-bar strong { @apply text-xs text-slate-200; }
   .threat-source-bar span { @apply text-[11px] text-slate-500; }
   .threat-source-bar a, .cve-link { @apply font-mono text-[10px] text-cyan-300 hover:text-cyan-200; }
-  .live-source-dot { @apply h-2 w-2 shrink-0 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(45,212,191,.7)]; }
+  .live-source-dot { @apply h-2 w-2 shrink-0 rounded-full bg-cyan-300; box-shadow: 0 0 10px rgba(45,212,191,.7); }
   .threat-stats .source-date { @apply text-lg; }
   .threat-item { @apply border-t border-slate-800/80 px-5 py-5 first:border-t-0 hover:bg-slate-800/20; }
   .threat-item-top { @apply flex items-start justify-between gap-5; }
@@ -212,7 +203,7 @@
   .collector-bad { @apply text-rose-300; }
   .collector-source-list { @apply grid gap-3 px-5 py-4; }
   .collector-source-list > div { @apply flex items-center gap-3; }
-  .collector-source-list code { @apply min-w-12 rounded-lg border border-cyan-400/20 bg-cyan-400/[0.05] px-2 py-1.5 text-center; }
+  .collector-source-list code { @apply min-w-12 rounded-lg border border-cyan-400/20 bg-cyan-400/5 px-2 py-1.5 text-center; }
   .collector-source-list span { @apply grid gap-0.5; }
   .collector-source-list strong { @apply text-xs text-slate-200; }
   .collector-source-list small { @apply text-[10px] text-slate-500; }
@@ -248,4 +239,9 @@
 @media (prefers-reduced-motion: reduce) {
   .spinner { animation: none; }
   .analytics-bar span { transition: none; }
+}
+
+
+@media (min-width: 1280px) {
+  .dashboard-grid { grid-template-columns: minmax(0,1.7fr) minmax(300px,.8fr); }
 }
