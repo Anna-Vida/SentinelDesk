@@ -6,7 +6,7 @@ import { EmptyState, ErrorState, LoadingState } from '../components/States'
 import { SecurityEventForm } from '../components/SecurityEventForm'
 import { EventLinkDialog } from '../components/EventLinkDialog'
 
-export function SecurityEventsPage({ events, incidents, loading, error, onRetry, onCreated, onLinked }: {
+export function SecurityEventsPage({ events, incidents, loading, error, onRetry, onCreated, onLinked, canManage }: {
   events: SecurityEvent[]
   incidents: Incident[]
   loading: boolean
@@ -14,6 +14,7 @@ export function SecurityEventsPage({ events, incidents, loading, error, onRetry,
   onRetry: () => void
   onCreated: (event: SecurityEvent) => void
   onLinked: (event: SecurityEvent) => void
+  canManage: boolean
 }) {
   const [creating, setCreating] = useState(false)
   const [linking, setLinking] = useState<SecurityEvent | null>(null)
@@ -32,7 +33,7 @@ export function SecurityEventsPage({ events, incidents, loading, error, onRetry,
   return <>
     <section className="welcome compact">
       <div><span className="eyebrow">TELEMETRY</span><h2>Security events</h2><p>Live signals observed across monitored systems and correlated with response cases.</p></div>
-      <button className="button primary" onClick={() => setCreating(true)}>＋ Record event</button>
+      {canManage && <button className="button primary" onClick={() => setCreating(true)}>＋ Record event</button>}
     </section>
     <section className="panel">
       <div className="filters event-filters">
@@ -44,12 +45,12 @@ export function SecurityEventsPage({ events, incidents, loading, error, onRetry,
           <tbody>{visibleEvents.map((item) => <tr key={item.id}>
             <td><strong>{item.eventType}</strong></td><td><code>{item.sourceIp}</code></td><td className="description-cell">{item.description}</td><td><RiskScore value={item.riskScore} /></td><td>{formatDate(item.detectedAt)}</td>
             <td>{item.incidentId ? <span className="linked-case">#{shortId(item.incidentId)}</span> : <span className="muted">Unlinked</span>}</td>
-            <td className="table-actions"><button className="button ghost small" onClick={() => setLinking(item)}>{item.incidentId ? 'Relink' : 'Link'}</button></td>
+            <td className="table-actions">{canManage ? <button className="button ghost small" onClick={() => setLinking(item)}>{item.incidentId ? 'Relink' : 'Link'}</button> : <span className="muted">Read only</span>}</td>
           </tr>)}</tbody>
         </table>
       </div> : <EmptyState title={events.length ? 'No matching security events' : 'No security events'} detail={events.length ? 'Adjust your search or risk filter.' : 'Record telemetry manually or wait for incoming events.'} />}
     </section>
-    {creating && <SecurityEventForm incidents={incidents} onClose={() => setCreating(false)} onCreated={onCreated} />}
-    {linking && <EventLinkDialog securityEvent={linking} incidents={incidents} onClose={() => setLinking(null)} onLinked={onLinked} />}
+    {canManage && creating && <SecurityEventForm incidents={incidents} onClose={() => setCreating(false)} onCreated={onCreated} />}
+    {canManage && linking && <EventLinkDialog securityEvent={linking} incidents={incidents} onClose={() => setLinking(null)} onLinked={onLinked} />}
   </>
 }

@@ -5,6 +5,8 @@ namespace SentinelDesk.Api.Data;
 
 public sealed class SentinelDeskDbContext(DbContextOptions<SentinelDeskDbContext> options) : DbContext(options)
 {
+    public DbSet<AppUser> Users => Set<AppUser>();
+
     public DbSet<Incident> Incidents => Set<Incident>();
 
     public DbSet<SecurityEvent> SecurityEvents => Set<SecurityEvent>();
@@ -12,6 +14,18 @@ public sealed class SentinelDeskDbContext(DbContextOptions<SentinelDeskDbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<AppUser>(entity =>
+        {
+            entity.ToTable("Users");
+            entity.HasKey(user => user.Id);
+            entity.Property(user => user.Email).HasMaxLength(320).IsRequired();
+            entity.Property(user => user.DisplayName).HasMaxLength(100).IsRequired();
+            entity.Property(user => user.PasswordHash).HasMaxLength(1_000).IsRequired();
+            entity.Property(user => user.Role).HasConversion<string>().HasMaxLength(20).IsRequired();
+            entity.Property(user => user.CreatedAt).HasColumnType("timestamp with time zone").IsRequired();
+            entity.HasIndex(user => user.Email).IsUnique();
+        });
 
         modelBuilder.Entity<Incident>(entity =>
         {

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -7,9 +8,11 @@ using SentinelDesk.Api.Contracts.RealTime;
 using SentinelDesk.Api.Data;
 using SentinelDesk.Api.Hubs;
 using SentinelDesk.Api.Models;
+using SentinelDesk.Api.Security;
 
 namespace SentinelDesk.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public sealed class IncidentsController(
@@ -95,6 +98,7 @@ public sealed class IncidentsController(
     // -------------------------------------------------------------------------
     // POST /api/incidents
     // -------------------------------------------------------------------------
+    [Authorize(Roles = RoleNames.AnalystOrAdmin)]
     [HttpPost]
     [ProducesResponseType<Incident>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -135,6 +139,7 @@ public sealed class IncidentsController(
     // -------------------------------------------------------------------------
     // PUT /api/incidents/{id}
     // -------------------------------------------------------------------------
+    [Authorize(Roles = RoleNames.AnalystOrAdmin)]
     [HttpPut("{id:guid}")]
     [ProducesResponseType<Incident>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -183,6 +188,7 @@ public sealed class IncidentsController(
     // -------------------------------------------------------------------------
     // PATCH /api/incidents/{id}/status
     // -------------------------------------------------------------------------
+    [Authorize(Roles = RoleNames.AnalystOrAdmin)]
     [HttpPatch("{id:guid}/status")]
     [ProducesResponseType<Incident>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -248,6 +254,7 @@ public sealed class IncidentsController(
     // -------------------------------------------------------------------------
     // DELETE /api/incidents/{id}  — soft archive, never physical delete
     // -------------------------------------------------------------------------
+    [Authorize(Roles = RoleNames.Admin)]
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

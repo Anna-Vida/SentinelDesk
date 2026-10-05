@@ -12,14 +12,19 @@ const eventNames = [
   'IncidentArchived', 'SecurityEventCreated', 'SecurityEventLinked',
 ] as const
 
-export function useSecurityHub(onEvent: (event: RealtimeEvent) => void) {
+export function useSecurityHub(onEvent: (event: RealtimeEvent) => void, accessToken: string | null) {
   const [state, setState] = useState<ConnectionState>('Disconnected')
   const handlerRef = useRef(onEvent)
   handlerRef.current = onEvent
 
   useEffect(() => {
+    if (!accessToken) {
+      setState('Disconnected')
+      return
+    }
+
     const connection = new HubConnectionBuilder()
-      .withUrl(`${API_BASE_URL}/hubs/security`)
+      .withUrl(`${API_BASE_URL}/hubs/security`, { accessTokenFactory: () => accessToken })
       .withAutomaticReconnect()
       .configureLogging(LogLevel.Warning)
       .build()
@@ -30,16 +35,14 @@ export function useSecurityHub(onEvent: (event: RealtimeEvent) => void) {
     connection.onclose(() => setState('Disconnected'))
 
     let active = true
-    connection.start()
-      .then(() => active && setState('Connected'))
-      .catch(() => active && setState('Disconnected'))
+    connection.start().then(() => active && setState('Connected')).catch(() => active && setState('Disconnected'))
 
     return () => {
       active = false
       eventNames.forEach((name) => connection.off(name))
       if (connection.state !== HubConnectionState.Disconnected) void connection.stop()
     }
-  }, [])
+  }, [accessToken])
 
   return state
 }

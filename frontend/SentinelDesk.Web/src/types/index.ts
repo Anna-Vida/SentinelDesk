@@ -65,3 +65,22 @@ export interface RealtimeEvents {
   SecurityEventCreated: SecurityEvent
   SecurityEventLinked: { eventId: string; incidentId: string; linkedAt: string }
 }
+
+export enum UserRole {
+  Viewer = 'Viewer',
+  Analyst = 'Analyst',
+  Admin = 'Admin',
+}
+
+export interface AuthUser {
+  id: string
+  email: string
+  displayName: string
+  role: UserRole
+}
+
+export interface AuthSession {
+  token: string
+  expiresAt: string
+  user: AuthUser
+}

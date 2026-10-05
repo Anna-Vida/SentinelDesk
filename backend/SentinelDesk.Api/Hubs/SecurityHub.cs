@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
 namespace SentinelDesk.Api.Hubs;
@@ -5,6 +6,7 @@ namespace SentinelDesk.Api.Hubs;
 /// <summary>
 /// SignalR hub for streaming real-time security alerts and incident updates to connected SOC dashboards.
 /// </summary>
+[Authorize]
 public sealed class SecurityHub(ILogger<SecurityHub> logger) : Hub
 {
     public override async Task OnConnectedAsync()

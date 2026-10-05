@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -6,9 +7,11 @@ using SentinelDesk.Api.Contracts.SecurityEvents;
 using SentinelDesk.Api.Data;
 using SentinelDesk.Api.Hubs;
 using SentinelDesk.Api.Models;
+using SentinelDesk.Api.Security;
 
 namespace SentinelDesk.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/security-events")]
 public sealed class SecurityEventsController(
@@ -49,6 +52,7 @@ public sealed class SecurityEventsController(
     // -------------------------------------------------------------------------
     // POST /api/security-events
     // -------------------------------------------------------------------------
+    [Authorize(Roles = RoleNames.AnalystOrAdmin)]
     [HttpPost]
     [ProducesResponseType<SecurityEvent>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -117,6 +121,7 @@ public sealed class SecurityEventsController(
     // PATCH /api/security-events/{eventId}/incident/{incidentId}
     // Links an existing security event to an existing, non-archived incident.
     // -------------------------------------------------------------------------
+    [Authorize(Roles = RoleNames.AnalystOrAdmin)]
     [HttpPatch("{eventId:guid}/incident/{incidentId:guid}")]
     [ProducesResponseType<SecurityEvent>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
