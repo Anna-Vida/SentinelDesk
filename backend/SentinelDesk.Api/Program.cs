@@ -131,27 +131,6 @@ using (var scope = app.Services.CreateScope())
     {
         await database.Database.MigrateAsync();
     }
-
-    if (string.Equals(builder.Configuration["Maintenance:ClearLegacyTestData"], "true", StringComparison.OrdinalIgnoreCase))
-    {
-        var legacyTestIds = await database.Incidents
-            .Where(incident => incident.Title.StartsWith("[LIVE TEST]"))
-            .Select(incident => incident.Id)
-            .ToListAsync();
-
-        if (legacyTestIds.Count > 0)
-        {
-            await database.SecurityEvents
-                .Where(securityEvent =>
-                    securityEvent.IncidentId.HasValue &&
-                    legacyTestIds.Contains(securityEvent.IncidentId.Value))
-                .ExecuteDeleteAsync();
-
-            await database.Incidents
-                .Where(incident => legacyTestIds.Contains(incident.Id))
-                .ExecuteDeleteAsync();
-        }
-    }
 }
 
 if (app.Environment.IsDevelopment())
