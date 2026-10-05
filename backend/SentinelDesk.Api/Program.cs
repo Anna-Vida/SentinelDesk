@@ -115,12 +115,6 @@ using (var scope = app.Services.CreateScope())
                 command.CommandText = "ALTER TABLE Users ADD COLUMN IsApproved INTEGER NOT NULL DEFAULT 1;";
                 await command.ExecuteNonQueryAsync();
             }
-
-            if (string.Equals(builder.Configuration["Maintenance:ResetUsers"], "true", StringComparison.OrdinalIgnoreCase))
-            {
-                command.CommandText = "DELETE FROM Users;";
-                await command.ExecuteNonQueryAsync();
-            }
         }
         finally
         {
@@ -130,11 +124,6 @@ using (var scope = app.Services.CreateScope())
     else
     {
         await database.Database.MigrateAsync();
-
-        if (string.Equals(builder.Configuration["Maintenance:ResetUsers"], "true", StringComparison.OrdinalIgnoreCase))
-        {
-            await database.Users.ExecuteDeleteAsync();
-        }
     }
 }
 
