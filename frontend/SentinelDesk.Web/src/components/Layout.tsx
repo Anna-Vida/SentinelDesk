@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { UserRole, type AuthUser, type ConnectionState } from '../types'
 
 export type Section = 'Dashboard' | 'Incidents' | 'Security Events' | 'Threat Intel' | 'Analytics' | 'Windows Agent' | 'Users'
@@ -45,11 +45,10 @@ export function Layout({ section, onNavigate, connection, user, onLogout, childr
     return items.filter((item) => item.name.toLowerCase().includes(term))
   }
 
-  const visibleMonitoring = useMemo(() => filterItems(monitoringNav), [query])
-  const visibleAdministration = useMemo(
-    () => user.role === UserRole.Admin ? filterItems(administrationNav) : [],
-    [query, user.role],
-  )
+  const visibleMonitoring = filterItems(monitoringNav)
+  const visibleAdministration = user.role === UserRole.Admin
+    ? filterItems(administrationNav)
+    : []
 
   const renderItem = (item: NavItem) => {
     const active = section === item.name
