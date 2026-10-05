@@ -5,5 +5,6 @@ public sealed record UserResponse(
     string Email,
     string DisplayName,
     string Role,
+    bool IsApproved,
     DateTime CreatedAt
 );

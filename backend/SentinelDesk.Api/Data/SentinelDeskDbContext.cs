@@ -23,6 +23,7 @@ public sealed class SentinelDeskDbContext(DbContextOptions<SentinelDeskDbContext
             entity.Property(user => user.DisplayName).HasMaxLength(100).IsRequired();
             entity.Property(user => user.PasswordHash).HasMaxLength(1_000).IsRequired();
             entity.Property(user => user.Role).HasConversion<string>().HasMaxLength(20).IsRequired();
+            entity.Property(user => user.IsApproved).IsRequired().HasDefaultValue(true);
             entity.Property(user => user.CreatedAt).HasColumnType("timestamp with time zone").IsRequired();
             entity.HasIndex(user => user.Email).IsUnique();
         });

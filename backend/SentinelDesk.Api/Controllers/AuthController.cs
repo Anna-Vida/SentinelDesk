@@ -24,8 +24,11 @@ public sealed class AuthController(
     public async Task<ActionResult<BootstrapStatusResponse>> GetBootstrapStatus(
         CancellationToken cancellationToken)
     {
-        var hasUsers = await dbContext.Users.AsNoTracking().AnyAsync(cancellationToken);
-        return Ok(new BootstrapStatusResponse(!hasUsers));
+        var hasApprovedUsers = await dbContext.Users
+            .AsNoTracking()
+            .AnyAsync(user => user.IsApproved, cancellationToken);
+
+        return Ok(new BootstrapStatusResponse(!hasApprovedUsers));
     }
 
     [AllowAnonymous]
@@ -34,12 +37,12 @@ public sealed class AuthController(
         RegisterRequest request,
         CancellationToken cancellationToken)
     {
-        if (await dbContext.Users.AnyAsync(cancellationToken))
+        if (await dbContext.Users.AnyAsync(user => user.IsApproved, cancellationToken))
         {
             return StatusCode(StatusCodes.Status403Forbidden, new ProblemDetails
             {
-                Title = "Registration is closed",
-                Detail = "The workspace is already initialized. Ask an Admin to create your account.",
+                Title = "Workspace already initialized",
+                Detail = "Use Sign in or Request access.",
                 Status = StatusCodes.Status403Forbidden,
                 Instance = HttpContext.Request.Path
             });
@@ -54,6 +57,17 @@ public sealed class AuthController(
             return ValidationProblem(ModelState);
         }
 
+        if (await dbContext.Users.AnyAsync(user => user.Email == email, cancellationToken))
+        {
+            return Conflict(new ProblemDetails
+            {
+                Title = "Email already in use",
+                Detail = "Use a different email address for the Admin account.",
+                Status = StatusCodes.Status409Conflict,
+                Instance = HttpContext.Request.Path
+            });
+        }
+
         var user = new AppUser
         {
             Id = Guid.NewGuid(),
@@ -61,28 +75,83 @@ public sealed class AuthController(
             DisplayName = displayName,
             PasswordHash = string.Empty,
             Role = UserRole.Admin,
+            IsApproved = true,
             CreatedAt = DateTime.UtcNow
         };
 
         user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
         dbContext.Users.Add(user);
+        await dbContext.SaveChangesAsync(cancellationToken);
 
-        try
-        {
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateException)
+        return Ok(CreateAuthResponse(user));
+    }
+
+    [AllowAnonymous]
+    [HttpPost("request-access")]
+    public async Task<ActionResult<AccessRequestResponse>> RequestAccess(
+        RequestAccessRequest request,
+        CancellationToken cancellationToken)
+    {
+        var workspaceReady = await dbContext.Users
+            .AsNoTracking()
+            .AnyAsync(user => user.IsApproved, cancellationToken);
+
+        if (!workspaceReady)
         {
             return Conflict(new ProblemDetails
             {
-                Title = "Workspace initialization conflict",
-                Detail = "The workspace was initialized by another request. Sign in or ask an Admin for an account.",
+                Title = "Workspace setup required",
+                Detail = "The first Admin must initialize this SentinelDesk workspace before access can be requested.",
                 Status = StatusCodes.Status409Conflict,
                 Instance = HttpContext.Request.Path
             });
         }
 
-        return Ok(CreateAuthResponse(user));
+        var displayName = request.DisplayName.Trim();
+        var email = request.Email.Trim().ToLowerInvariant();
+
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            ModelState.AddModelError(nameof(request.DisplayName), "Display name is required.");
+            return ValidationProblem(ModelState);
+        }
+
+        var existing = await dbContext.Users
+            .SingleOrDefaultAsync(user => user.Email == email, cancellationToken);
+
+        if (existing is not null)
+        {
+            return Conflict(new ProblemDetails
+            {
+                Title = existing.IsApproved ? "Account already exists" : "Access request already pending",
+                Detail = existing.IsApproved
+                    ? "Sign in with this email address."
+                    : "An Admin still needs to approve this access request.",
+                Status = StatusCodes.Status409Conflict,
+                Instance = HttpContext.Request.Path
+            });
+        }
+
+        var user = new AppUser
+        {
+            Id = Guid.NewGuid(),
+            Email = email,
+            DisplayName = displayName,
+            PasswordHash = string.Empty,
+            Role = UserRole.Viewer,
+            IsApproved = false,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
+        dbContext.Users.Add(user);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return Accepted(new AccessRequestResponse(
+            user.Id,
+            user.Email,
+            user.DisplayName,
+            "Pending"));
     }
 
     [AllowAnonymous]
@@ -102,6 +171,17 @@ public sealed class AuthController(
         var result = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
         if (result == PasswordVerificationResult.Failed)
             return InvalidCredentials();
+
+        if (!user.IsApproved)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ProblemDetails
+            {
+                Title = "Access request pending",
+                Detail = "Your account exists, but a SentinelDesk Admin still needs to approve it.",
+                Status = StatusCodes.Status403Forbidden,
+                Instance = HttpContext.Request.Path
+            });
+        }
 
         if (result == PasswordVerificationResult.SuccessRehashNeeded)
         {

@@ -100,9 +100,31 @@ using (var scope = app.Services.CreateScope())
     var database = scope.ServiceProvider.GetRequiredService<SentinelDeskDbContext>();
 
     if (database.Database.IsSqlite())
+    {
         await database.Database.EnsureCreatedAsync();
+        await database.Database.OpenConnectionAsync();
+
+        try
+        {
+            await using var command = database.Database.GetDbConnection().CreateCommand();
+            command.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Users') WHERE name = 'IsApproved';";
+            var hasApprovalColumn = Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
+
+            if (!hasApprovalColumn)
+            {
+                command.CommandText = "ALTER TABLE Users ADD COLUMN IsApproved INTEGER NOT NULL DEFAULT 1;";
+                await command.ExecuteNonQueryAsync();
+            }
+        }
+        finally
+        {
+            await database.Database.CloseConnectionAsync();
+        }
+    }
     else
+    {
         await database.Database.MigrateAsync();
+    }
 }
 
 if (app.Environment.IsDevelopment())

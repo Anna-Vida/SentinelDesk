@@ -46,6 +46,11 @@ namespace SentinelDesk.Api.Data.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<bool>("IsApproved")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasMaxLength(20)

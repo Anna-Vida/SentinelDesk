@@ -33,3 +33,8 @@
 
 /* Analytics reporting */
 .report-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+
+/* Live client access-request workflow */
+.auth-success{margin:0;padding:11px 13px;border:1px solid #286a55;border-radius:6px;background:#123126;color:#ccfff0;font-size:11px;line-height:1.5}.pending-banner{display:flex;align-items:center;gap:12px;margin:0 0 16px;padding:13px 16px;border:1px solid #665526;border-radius:7px;background:#2c2917;color:#ffd36a;font-size:12px}.pending-banner span{color:#b8a96f}.status-pill{display:inline-block;padding:4px 8px;border-radius:999px;font:9px ui-monospace,monospace;text-transform:uppercase;border:1px solid}.status-pill.approved{color:#5eead4;border-color:#28695f;background:#13332f}.status-pill.pending{color:#ffd36a;border-color:#665526;background:#2c2917}.pending-user{background:#241f123d}.approval-actions{display:flex;gap:6px;justify-content:flex-end;min-width:300px}.approval-actions .button{white-space:nowrap}
+@media(max-width:900px){.approval-actions{min-width:0;flex-wrap:wrap}.pending-banner{align-items:flex-start;flex-direction:column;gap:4px}}

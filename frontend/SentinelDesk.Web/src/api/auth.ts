@@ -5,6 +5,13 @@ export interface BootstrapStatus {
   requiresSetup: boolean
 }
 
+export interface AccessRequest {
+  id: string
+  email: string
+  displayName: string
+  status: 'Pending'
+}
+
 export const getBootstrapStatus = () =>
   apiRequest<BootstrapStatus>('/api/auth/bootstrap-status')
 
@@ -19,6 +26,15 @@ export const register = (
   email: string,
   password: string,
 ) => apiRequest<AuthSession>('/api/auth/register', {
+  method: 'POST',
+  body: JSON.stringify({ displayName, email, password }),
+})
+
+export const requestAccess = (
+  displayName: string,
+  email: string,
+  password: string,
+) => apiRequest<AccessRequest>('/api/auth/request-access', {
   method: 'POST',
   body: JSON.stringify({ displayName, email, password }),
 })
