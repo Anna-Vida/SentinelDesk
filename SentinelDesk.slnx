@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/backend/">
     <Project Path="backend/SentinelDesk.Api/SentinelDesk.Api.csproj" />
+    <Project Path="backend/SentinelDesk.Api.Tests/SentinelDesk.Api.Tests.csproj" />
   </Folder>
 </Solution>

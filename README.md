@@ -9,7 +9,7 @@ SentinelDesk is a real-time cybersecurity incident management platform built as 
 - **Real time:** ASP.NET Core SignalR
 - **Frontend:** React 19 · TypeScript · Vite
 - **Security:** JWT authentication · Viewer/Analyst/Admin RBAC
-- **Quality:** OpenAPI · Problem Details · GitHub Actions CI
+- **Quality:** OpenAPI · Problem Details · xUnit · GitHub Actions CI
 
 Everything used by the project is available with free/open-source tooling for local development.
 
@@ -176,6 +176,7 @@ Backend:
 
 ```powershell
 dotnet build SentinelDesk.slnx
+dotnet test SentinelDesk.slnx
 ```
 
 Frontend:

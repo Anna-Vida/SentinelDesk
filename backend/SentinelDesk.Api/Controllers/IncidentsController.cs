@@ -9,6 +9,7 @@ using SentinelDesk.Api.Data;
 using SentinelDesk.Api.Hubs;
 using SentinelDesk.Api.Models;
 using SentinelDesk.Api.Security;
+using SentinelDesk.Api.Services;
 
 namespace SentinelDesk.Api.Controllers;
 
@@ -20,17 +21,6 @@ public sealed class IncidentsController(
     IHubContext<SecurityHub> hubContext,
     ILogger<IncidentsController> logger) : ControllerBase
 {
-    // Enforces the one-way status workflow: Open → Investigating → Contained → Resolved → Closed.
-    // Closed is terminal — it has no entry here, so TryGetValue returns false.
-    private static readonly IReadOnlyDictionary<IncidentStatus, IncidentStatus> AllowedTransitions =
-        new Dictionary<IncidentStatus, IncidentStatus>
-        {
-            [IncidentStatus.Open] = IncidentStatus.Investigating,
-            [IncidentStatus.Investigating] = IncidentStatus.Contained,
-            [IncidentStatus.Contained] = IncidentStatus.Resolved,
-            [IncidentStatus.Resolved] = IncidentStatus.Closed,
-        };
-
     // -------------------------------------------------------------------------
     // GET /api/incidents
     // -------------------------------------------------------------------------
@@ -214,19 +204,12 @@ public sealed class IncidentsController(
                 Instance = HttpContext.Request.Path
             });
 
-        // Validate the transition against the allowed workflow.
-        if (!AllowedTransitions.TryGetValue(incident.Status, out var allowedNext) ||
-            allowedNext != request.NewStatus)
+        if (!IncidentWorkflow.CanTransition(incident.Status, request.NewStatus))
         {
-            var detail = AllowedTransitions.TryGetValue(incident.Status, out var next)
-                ? $"Cannot transition from '{incident.Status}' to '{request.NewStatus}'. " +
-                  $"The only allowed next status is '{next}'."
-                : $"'{incident.Status}' is a terminal status. No further transitions are allowed.";
-
             return Conflict(new ProblemDetails
             {
                 Title = "Invalid status transition",
-                Detail = detail,
+                Detail = IncidentWorkflow.DescribeInvalidTransition(incident.Status, request.NewStatus),
                 Status = StatusCodes.Status409Conflict,
                 Instance = HttpContext.Request.Path
             });

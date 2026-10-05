@@ -19,6 +19,8 @@ jobs:
         run: dotnet restore SentinelDesk.slnx
       - name: Build
         run: dotnet build SentinelDesk.slnx --configuration Release --no-restore
+      - name: Test
+        run: dotnet test SentinelDesk.slnx --configuration Release --no-build
 
   frontend:
     name: Frontend build and lint
