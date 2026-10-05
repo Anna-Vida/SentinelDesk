@@ -11,6 +11,12 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var deploymentPort = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(deploymentPort))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{deploymentPort}");
+}
+
 const string ApplicationCorsPolicy = "ApplicationCors";
 
 builder.Services.AddProblemDetails();
@@ -79,6 +85,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var database = scope.ServiceProvider.GetRequiredService<SentinelDeskDbContext>();
+    await database.Database.MigrateAsync();
+}
 
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
