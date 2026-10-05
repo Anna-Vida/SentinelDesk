@@ -1,5 +1,12 @@
 import { apiRequest } from './client'
-import { UserRole, type AuthSession } from '../types'
+import type { AuthSession } from '../types'
+
+export interface BootstrapStatus {
+  requiresSetup: boolean
+}
+
+export const getBootstrapStatus = () =>
+  apiRequest<BootstrapStatus>('/api/auth/bootstrap-status')
 
 export const login = (email: string, password: string) =>
   apiRequest<AuthSession>('/api/auth/login', {
@@ -11,8 +18,7 @@ export const register = (
   displayName: string,
   email: string,
   password: string,
-  role: UserRole.Viewer | UserRole.Analyst,
 ) => apiRequest<AuthSession>('/api/auth/register', {
   method: 'POST',
-  body: JSON.stringify({ displayName, email, password, role }),
+  body: JSON.stringify({ displayName, email, password }),
 })

@@ -1,8 +1,8 @@
-import type { AuthUser, ConnectionState } from '../types'
+import { UserRole, type AuthUser, type ConnectionState } from '../types'
 
-export type Section = 'Dashboard' | 'Incidents' | 'Security Events' | 'Analytics'
+export type Section = 'Dashboard' | 'Incidents' | 'Security Events' | 'Analytics' | 'Users'
 
-const nav: Array<{ name: Section; icon: string }> = [
+const baseNav: Array<{ name: Section; icon: string }> = [
   { name: 'Dashboard', icon: '⌁' },
   { name: 'Incidents', icon: '△' },
   { name: 'Security Events', icon: '◎' },
@@ -18,6 +18,10 @@ export function Layout({ section, onNavigate, connection, user, onLogout, childr
   children: React.ReactNode
 }) {
   const initials = user.displayName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'SO'
+  const nav = user.role === UserRole.Admin
+    ? [...baseNav, { name: 'Users' as const, icon: '◇' }]
+    : baseNav
+
   return <div className="app-shell">
     <aside className="sidebar">
       <div className="brand-mark"><span className="brand-shield">S</span><div><strong>SentinelDesk</strong><small>SECURITY OPERATIONS</small></div></div>

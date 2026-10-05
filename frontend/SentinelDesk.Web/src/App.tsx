@@ -11,6 +11,7 @@ import { AnalyticsPage } from './pages/AnalyticsPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { IncidentsPage } from './pages/IncidentsPage'
 import { SecurityEventsPage } from './pages/SecurityEventsPage'
+import { UsersPage } from './pages/UsersPage'
 import { UserRole, type AuthSession, type Incident, type SecurityEvent } from './types'
 
 export default function App() {
@@ -38,7 +39,7 @@ export default function App() {
 
   useEffect(() => { if (session) void loadData() }, [session, loadData])
   useEffect(() => {
-    const expire = () => { setSession(null); setIncidents([]); setEvents([]); setSelected(null); setCreating(false) }
+    const expire = () => { setSession(null); setIncidents([]); setEvents([]); setSelected(null); setCreating(false); setSection('Dashboard') }
     window.addEventListener('sentineldesk:auth-expired', expire)
     return () => window.removeEventListener('sentineldesk:auth-expired', expire)
   }, [])
@@ -60,7 +61,7 @@ export default function App() {
   }, [upsertIncident, upsertSecurityEvent])
 
   const connection = useSecurityHub(handleRealtime, session?.token ?? null)
-  const logout = () => { clearAuthSession(); setSession(null); setIncidents([]); setEvents([]); setSelected(null); setCreating(false) }
+  const logout = () => { clearAuthSession(); setSession(null); setIncidents([]); setEvents([]); setSelected(null); setCreating(false); setSection('Dashboard') }
 
   if (!session) return <AuthPage onAuthenticated={setSession} />
 
@@ -73,6 +74,7 @@ export default function App() {
     {section === 'Incidents' && <IncidentsPage revision={revision} onSelect={setSelected} onNewIncident={() => setCreating(true)} canManage={canManage} />}
     {section === 'Security Events' && <SecurityEventsPage events={events} incidents={incidents} loading={loading} error={error} onRetry={loadData} onCreated={upsertSecurityEvent} onLinked={upsertSecurityEvent} canManage={canManage} />}
     {section === 'Analytics' && <AnalyticsPage incidents={incidents} events={events} loading={loading} error={error} onRetry={loadData} />}
+    {section === 'Users' && session.user.role === UserRole.Admin && <UsersPage />}
     {canManage && creating && <IncidentForm onClose={() => setCreating(false)} onCreated={(item) => { upsertIncident(item); setRevision((value) => value + 1) }} />}
     {selected && <IncidentDetail incident={selected} onClose={() => setSelected(null)} onChanged={(item) => { upsertIncident(item); setSelected(item); setRevision((value) => value + 1) }} onArchived={removeIncident} canManage={canManage} canArchive={canArchive} />}
     {toast && <div className="toast" role="status"><span>◉</span>{toast}</div>}

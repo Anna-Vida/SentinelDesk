@@ -13,13 +13,15 @@ npm run dev
 
 The frontend runs at `http://localhost:5173`.
 
-On a fresh database, use **Register** first. The first registered account becomes the Admin bootstrap account. Later registrations can join as Analyst or Viewer.
+On a fresh database, SentinelDesk automatically detects that the workspace needs setup and shows the one-time **Admin initialization** form. Once an Admin exists, public registration closes and the normal sign-in screen is shown.
+
+Admins provision additional accounts from the **Users** page.
 
 ## Access levels
 
 - **Viewer** — read-only dashboard, incidents, telemetry, and analytics
 - **Analyst** — Viewer access plus incident/security-event mutation workflows
-- **Admin** — Analyst access plus incident archival
+- **Admin** — Analyst access plus incident archival and user provisioning
 
 Authentication uses JWT bearer tokens. The frontend stores the active session locally and supplies the token to both REST requests and the SignalR connection.
 

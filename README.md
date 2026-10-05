@@ -187,8 +187,12 @@ A GitHub Actions workflow is included for backend build plus frontend build/lint
 
 ```text
 GET    /api/health
-POST   /api/auth/register
+GET    /api/auth/bootstrap-status
+POST   /api/auth/register   # first-run Admin bootstrap only
 POST   /api/auth/login
+
+GET    /api/users           # Admin
+POST   /api/users           # Admin
 
 GET    /api/incidents
 GET    /api/incidents/{id}
