@@ -8,7 +8,10 @@ export function EventLinkDialog({ securityEvent, incidents, onClose, onLinked }:
   onClose: () => void
   onLinked: (event: SecurityEvent) => void
 }) {
-  const [incidentId, setIncidentId] = useState(securityEvent.incidentId ?? incidents[0]?.id ?? '')
+  const initialIncidentId = incidents.some((incident) => incident.id === securityEvent.incidentId)
+    ? securityEvent.incidentId ?? ''
+    : incidents[0]?.id ?? ''
+  const [incidentId, setIncidentId] = useState(initialIncidentId)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 

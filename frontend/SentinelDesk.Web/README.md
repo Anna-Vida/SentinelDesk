@@ -13,6 +13,16 @@ npm run dev
 
 The frontend runs at `http://localhost:5173`.
 
+On a fresh database, use **Register** first. The first registered account becomes the Admin bootstrap account. Later registrations can join as Analyst or Viewer.
+
+## Access levels
+
+- **Viewer** — read-only dashboard, incidents, telemetry, and analytics
+- **Analyst** — Viewer access plus incident/security-event mutation workflows
+- **Admin** — Analyst access plus incident archival
+
+Authentication uses JWT bearer tokens. The frontend stores the active session locally and supplies the token to both REST requests and the SignalR connection.
+
 ## Environment
 
 Copy `.env.example` to `.env` when you need to override the backend URL:
@@ -32,4 +42,4 @@ npm run lint
 npm run preview
 ```
 
-The app uses one reusable SignalR connection to `/hubs/security` and reacts to the backend's incident and security-event broadcasts without polling.
+The app uses one reusable authenticated SignalR connection to `/hubs/security` and reacts to incident/security-event broadcasts without polling.

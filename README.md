@@ -8,7 +8,8 @@ SentinelDesk is a real-time cybersecurity incident management platform built as 
 - **Data:** PostgreSQL · Entity Framework Core · Npgsql
 - **Real time:** ASP.NET Core SignalR
 - **Frontend:** React 19 · TypeScript · Vite
-- **Security:** JWT authentication · Viewer/Analyst/Admin RBAC\n- **Quality:** OpenAPI · Problem Details · GitHub Actions CI
+- **Security:** JWT authentication · Viewer/Analyst/Admin RBAC
+- **Quality:** OpenAPI · Problem Details · GitHub Actions CI
 
 Everything used by the project is available with free/open-source tooling for local development.
 
@@ -113,7 +114,9 @@ dotnet ef database update --project backend/SentinelDesk.Api --startup-project b
 dotnet run --project backend/SentinelDesk.Api
 ```
 
-On first launch after the authentication migration, register the first account from the frontend. That first account becomes Admin automatically.\n\nDevelopment endpoints:
+On first launch after the authentication migration, register the first account from the frontend. That first account becomes Admin automatically.
+
+Development endpoints:
 
 - API: `http://localhost:5043`
 - Health: `GET http://localhost:5043/api/health`
@@ -144,7 +147,15 @@ Set the frontend API URL:
 VITE_API_BASE_URL=https://your-api.example.com
 ```
 
-Set the backend PostgreSQL connection string using your hosting provider's secret/environment configuration.\n\nSet a production JWT signing key with at least 32 bytes:\n\n```text\nJwt__Key=replace-with-a-long-random-secret\n```\n\nDo not reuse the development-only signing key in production.
+Set the backend PostgreSQL connection string using your hosting provider's secret/environment configuration.
+
+Set a production JWT signing key with at least 32 bytes:
+
+```text
+Jwt__Key=replace-with-a-long-random-secret
+```
+
+Do not reuse the development-only signing key in production.
 
 To allow the deployed frontend to call the API and connect to SignalR, set:
 
@@ -170,12 +181,14 @@ npm run build
 npm run lint
 ```
 
-GitHub Actions runs backend build plus frontend build/lint automatically on pushes and pull requests targeting `main`.
+A GitHub Actions workflow is included for backend build plus frontend build/lint. It can be run manually from the Actions tab once GitHub-hosted runners are available for the repository.
 
 ## API overview
 
 ```text
 GET    /api/health
+POST   /api/auth/register
+POST   /api/auth/login
 
 GET    /api/incidents
 GET    /api/incidents/{id}
