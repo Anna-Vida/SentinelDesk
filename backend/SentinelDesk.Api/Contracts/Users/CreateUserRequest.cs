@@ -1,8 +1,9 @@
 using System.ComponentModel.DataAnnotations;
+using SentinelDesk.Api.Models;
 
-namespace SentinelDesk.Api.Contracts.Auth;
+namespace SentinelDesk.Api.Contracts.Users;
 
-public sealed class RegisterRequest
+public sealed class CreateUserRequest
 {
     [Required]
     [StringLength(100, MinimumLength = 2)]
@@ -16,4 +17,7 @@ public sealed class RegisterRequest
     [Required]
     [StringLength(128, MinimumLength = 8)]
     public string Password { get; init; } = string.Empty;
+
+    [Required]
+    public UserRole Role { get; init; }
 }

@@ -20,9 +20,31 @@ public sealed class AuthController(
     IConfiguration configuration) : ControllerBase
 {
     [AllowAnonymous]
-    [HttpPost("register")]
-    public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request, CancellationToken cancellationToken)
+    [HttpGet("bootstrap-status")]
+    public async Task<ActionResult<BootstrapStatusResponse>> GetBootstrapStatus(
+        CancellationToken cancellationToken)
     {
+        var hasUsers = await dbContext.Users.AsNoTracking().AnyAsync(cancellationToken);
+        return Ok(new BootstrapStatusResponse(!hasUsers));
+    }
+
+    [AllowAnonymous]
+    [HttpPost("register")]
+    public async Task<ActionResult<AuthResponse>> Register(
+        RegisterRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (await dbContext.Users.AnyAsync(cancellationToken))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ProblemDetails
+            {
+                Title = "Registration is closed",
+                Detail = "The workspace is already initialized. Ask an Admin to create your account.",
+                Status = StatusCodes.Status403Forbidden,
+                Instance = HttpContext.Request.Path
+            });
+        }
+
         var displayName = request.DisplayName.Trim();
         var email = request.Email.Trim().ToLowerInvariant();
 
@@ -32,54 +54,47 @@ public sealed class AuthController(
             return ValidationProblem(ModelState);
         }
 
-        if (await dbContext.Users.AnyAsync(user => user.Email == email, cancellationToken))
-        {
-            return Conflict(new ProblemDetails
-            {
-                Title = "Account already exists",
-                Detail = "An account with that email address already exists.",
-                Status = StatusCodes.Status409Conflict,
-                Instance = HttpContext.Request.Path
-            });
-        }
-
-        var hasUsers = await dbContext.Users.AnyAsync(cancellationToken);
-
-        if (hasUsers && request.Role == UserRole.Admin)
-        {
-            ModelState.AddModelError(nameof(request.Role), "Admin accounts cannot be self-registered.");
-            return ValidationProblem(ModelState);
-        }
-
-        var role = !hasUsers
-            ? UserRole.Admin
-            : request.Role is UserRole.Viewer or UserRole.Analyst
-                ? request.Role.Value
-                : UserRole.Analyst;
-
         var user = new AppUser
         {
             Id = Guid.NewGuid(),
             Email = email,
             DisplayName = displayName,
             PasswordHash = string.Empty,
-            Role = role,
+            Role = UserRole.Admin,
             CreatedAt = DateTime.UtcNow
         };
 
         user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
         dbContext.Users.Add(user);
-        await dbContext.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            return Conflict(new ProblemDetails
+            {
+                Title = "Workspace initialization conflict",
+                Detail = "The workspace was initialized by another request. Sign in or ask an Admin for an account.",
+                Status = StatusCodes.Status409Conflict,
+                Instance = HttpContext.Request.Path
+            });
+        }
 
         return Ok(CreateAuthResponse(user));
     }
 
     [AllowAnonymous]
     [HttpPost("login")]
-    public async Task<ActionResult<AuthResponse>> Login(LoginRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<AuthResponse>> Login(
+        LoginRequest request,
+        CancellationToken cancellationToken)
     {
         var email = request.Email.Trim().ToLowerInvariant();
-        var user = await dbContext.Users.SingleOrDefaultAsync(candidate => candidate.Email == email, cancellationToken);
+        var user = await dbContext.Users.SingleOrDefaultAsync(
+            candidate => candidate.Email == email,
+            cancellationToken);
 
         if (user is null)
             return InvalidCredentials();
