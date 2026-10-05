@@ -84,3 +84,20 @@ export interface AuthSession {
   expiresAt: string
   user: AuthUser
 }
+
+
+export type TestScenarioName = 'phishing' | 'brute-force' | 'malware'
+
+export interface TestLabStatus {
+  databaseOnline: boolean
+  activeIncidents: number
+  securityEvents: number
+  checkedAt: string
+}
+
+export interface TestScenarioResult {
+  scenario: TestScenarioName
+  incident: Incident
+  events: SecurityEvent[]
+  message: string
+}

@@ -56,6 +56,7 @@ Connected browser sessions update without polling or a page refresh.
 - Security-event creation and correlation
 - Operational analytics for status, severity, risk, and linkage
 - CSV export for incident and telemetry reporting
+- Live security simulation lab for phishing, brute-force, and malware scenarios
 - Responsive dark SOC interface with loading, error, and empty states
 
 ## Repository structure

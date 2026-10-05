@@ -44,11 +44,10 @@ public sealed class IncidentsController(
 
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
-            var search = query.Search.Trim();
-            // ILike is PostgreSQL's case-insensitive LIKE — avoids a full-table ToLower scan.
+            var search = query.Search.Trim().ToLower();
             queryable = queryable.Where(i =>
-                EF.Functions.ILike(i.Title, $"%{search}%") ||
-                EF.Functions.ILike(i.Description, $"%{search}%"));
+                i.Title.ToLower().Contains(search) ||
+                i.Description.ToLower().Contains(search));
         }
 
         var totalItems = await queryable.CountAsync(cancellationToken);
