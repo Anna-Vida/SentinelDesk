@@ -1,6 +1,6 @@
 import { UserRole, type AuthUser, type ConnectionState } from '../types'
 
-export type Section = 'Dashboard' | 'Incidents' | 'Security Events' | 'Threat Intel' | 'Analytics' | 'Live Test' | 'Users'
+export type Section = 'Dashboard' | 'Incidents' | 'Security Events' | 'Threat Intel' | 'Analytics' | 'Windows Agent' | 'Users'
 
 const baseNav: Array<{ name: Section; icon: string }> = [
   { name: 'Dashboard', icon: '⌁' },
@@ -19,12 +19,9 @@ export function Layout({ section, onNavigate, connection, user, onLogout, childr
   children: React.ReactNode
 }) {
   const initials = user.displayName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'SO'
-  const operationalNav = user.role === UserRole.Viewer
-    ? baseNav
-    : [...baseNav, { name: 'Live Test' as const, icon: '◈' }]
   const nav = user.role === UserRole.Admin
-    ? [...operationalNav, { name: 'Users' as const, icon: '◇' }]
-    : operationalNav
+    ? [...baseNav, { name: 'Windows Agent' as const, icon: '▣' }, { name: 'Users' as const, icon: '◇' }]
+    : baseNav
 
   return <div className="app-shell">
     <aside className="sidebar">

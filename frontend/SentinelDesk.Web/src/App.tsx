@@ -7,10 +7,10 @@ import { IncidentDetail } from './components/IncidentDetail'
 import { IncidentForm } from './components/IncidentForm'
 import { Layout, type Section } from './components/Layout'
 import { useSecurityHub, type RealtimeEvent } from './hooks/useSecurityHub'
+import { AgentsPage } from './pages/AgentsPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { IncidentsPage } from './pages/IncidentsPage'
-import { LiveTestPage } from './pages/LiveTestPage'
 import { SecurityEventsPage } from './pages/SecurityEventsPage'
 import { ThreatIntelPage } from './pages/ThreatIntelPage'
 import { UsersPage } from './pages/UsersPage'
@@ -77,7 +77,7 @@ export default function App() {
     {section === 'Security Events' && <SecurityEventsPage events={events} incidents={incidents} loading={loading} error={error} onRetry={loadData} onCreated={upsertSecurityEvent} onLinked={upsertSecurityEvent} canManage={canManage} />}
     {section === 'Threat Intel' && <ThreatIntelPage />}
     {section === 'Analytics' && <AnalyticsPage incidents={incidents} events={events} loading={loading} error={error} onRetry={loadData} />}
-    {section === 'Live Test' && canManage && <LiveTestPage connection={connection} onCompleted={loadData} canClear={canArchive} />}
+    {section === 'Windows Agent' && session.user.role === UserRole.Admin && <AgentsPage />}
     {section === 'Users' && session.user.role === UserRole.Admin && <UsersPage />}
     {canManage && creating && <IncidentForm onClose={() => setCreating(false)} onCreated={(item) => { upsertIncident(item); setRevision((value) => value + 1) }} />}
     {selected && <IncidentDetail incident={selected} onClose={() => setSelected(null)} onChanged={(item) => { upsertIncident(item); setSelected(item); setRevision((value) => value + 1) }} onArchived={removeIncident} canManage={canManage} canArchive={canArchive} />}

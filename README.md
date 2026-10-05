@@ -56,8 +56,8 @@ Connected browser sessions update without polling or a page refresh.
 - Security-event creation and correlation
 - Operational analytics for status, severity, risk, and linkage
 - CSV export for incident and telemetry reporting
-- Live security simulation lab for phishing, brute-force, and malware scenarios
 - Real external threat intelligence from the CISA Known Exploited Vulnerabilities (KEV) catalog
+- Real Windows endpoint telemetry ingestion for Event IDs 4625, 4688, and PowerShell 4104
 - Responsive dark SOC interface with loading, error, and empty states
 
 ## Repository structure
@@ -212,6 +212,9 @@ PATCH  /api/incidents/{id}/status
 DELETE /api/incidents/{id}
 
 GET    /api/threat-intel/cisa-kev
+POST   /api/ingest/windows        # Windows collector API key
+GET    /api/ingest/windows/status # Admin
+GET    /api/ingest/windows/setup  # Admin
 
 GET    /api/security-events
 GET    /api/security-events/{id}
@@ -239,3 +242,16 @@ ASPNETCORE_ENVIRONMENT=Production
 ```
 
 Mount persistent storage at `/data`. The API serves the built React application, REST endpoints, and SignalR from the same public origin.
+
+
+## Windows endpoint collector
+
+SentinelDesk includes `agents/windows/SentinelDeskAgent.ps1`, a PowerShell collector for real Windows Event Log telemetry.
+
+It monitors:
+
+- Event 4625 — failed logons
+- Event 4688 — process creation
+- Event 4104 — PowerShell script blocks
+
+Open the Admin-only **Windows Agent** page in the web app to get the production setup command and collector key. The `-EnableAudit` option enables the corresponding Windows audit sources before collection starts.
