@@ -65,7 +65,7 @@ public sealed class UsersController(
             Email = email,
             DisplayName = displayName,
             PasswordHash = string.Empty,
-            Role = request.Role,
+            Role = request.Role!.Value,
             CreatedAt = DateTime.UtcNow
         };
 

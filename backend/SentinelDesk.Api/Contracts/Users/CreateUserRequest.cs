@@ -19,5 +19,5 @@ public sealed class CreateUserRequest
     public string Password { get; init; } = string.Empty;
 
     [Required]
-    public UserRole Role { get; init; }
+    public UserRole? Role { get; init; }
 }
