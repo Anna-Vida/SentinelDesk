@@ -43,12 +43,35 @@ function Enable-SentinelDeskAudit {
     Write-Host 'Audit logging enabled. New 4625, 4688 and 4104 events can now be collected.'
 }
 
+function Save-State([hashtable]$State) {
+    $State | ConvertTo-Json | Set-Content -Path $statePath -Encoding UTF8
+}
+
+function Get-LatestRecordId([string]$LogName) {
+    try {
+        $latest = Get-WinEvent -LogName $LogName -MaxEvents 1 -ErrorAction Stop
+        if ($null -eq $latest) { return 0 }
+        return [long]$latest.RecordId
+    }
+    catch {
+        return 0
+    }
+}
+
+function New-InitialState {
+    $initial = @{
+        Security = Get-LatestRecordId -LogName 'Security'
+        PowerShell = Get-LatestRecordId -LogName 'Microsoft-Windows-PowerShell/Operational'
+    }
+
+    Save-State -State $initial
+    Write-Host 'Collector checkpoint initialized. Only new Windows events will be sent from this point forward.'
+    return $initial
+}
+
 function Read-State {
     if (-not (Test-Path $statePath)) {
-        return @{
-            Security = 0
-            PowerShell = 0
-        }
+        return New-InitialState
     }
 
     try {
@@ -59,15 +82,9 @@ function Read-State {
         }
     }
     catch {
-        return @{
-            Security = 0
-            PowerShell = 0
-        }
+        Write-Warning 'Collector checkpoint was unreadable. Reinitializing from the current Windows Event Log positions.'
+        return New-InitialState
     }
-}
-
-function Save-State([hashtable]$State) {
-    $State | ConvertTo-Json | Set-Content -Path $statePath -Encoding UTF8
 }
 
 function Get-EventData($Event) {
@@ -166,7 +183,12 @@ function Get-PowerShellEvents([long]$AfterRecordId) {
         }
     }
     catch {
-        Write-Warning "Unable to read PowerShell Operational log: $($_.Exception.Message)"
+        if ($_.Exception.Message -like '*No events were found*') {
+            Write-Host "$(Get-Date -Format T) - No PowerShell 4104 events yet."
+        }
+        else {
+            Write-Warning "Unable to read PowerShell Operational log: $($_.Exception.Message)"
+        }
     }
 
     return $events
@@ -219,11 +241,11 @@ do {
         Send-Batch -Events $all
 
         if ($security.Count -gt 0) {
-            $state.Security = ($security | Measure-Object -Property recordId -Maximum).Maximum
+            $state.Security = [long](($security | ForEach-Object { [long]$_['recordId'] } | Measure-Object -Maximum).Maximum)
         }
 
         if ($powerShell.Count -gt 0) {
-            $state.PowerShell = ($powerShell | Measure-Object -Property recordId -Maximum).Maximum
+            $state.PowerShell = [long](($powerShell | ForEach-Object { [long]$_['recordId'] } | Measure-Object -Maximum).Maximum)
         }
 
         Save-State -State $state
