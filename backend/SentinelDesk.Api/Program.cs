@@ -37,9 +37,18 @@ if (allowedOrigins.Length > 0)
 }
 
 builder.Services.AddOpenApi();
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' was not found.");
+
 builder.Services.AddDbContext<SentinelDeskDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")
-        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' was not found.")));
+{
+    if (connectionString.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
+        options.UseSqlite(connectionString);
+    else
+        options.UseNpgsql(connectionString);
+});
+
 builder.Services.AddScoped<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
 
 var jwtKey = builder.Configuration["Jwt:Key"]
@@ -89,7 +98,11 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var database = scope.ServiceProvider.GetRequiredService<SentinelDeskDbContext>();
-    await database.Database.MigrateAsync();
+
+    if (database.Database.IsSqlite())
+        await database.Database.EnsureCreatedAsync();
+    else
+        await database.Database.MigrateAsync();
 }
 
 if (app.Environment.IsDevelopment())
@@ -100,10 +113,17 @@ if (allowedOrigins.Length > 0)
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 app.MapHub<SecurityHub>("/hubs/security");
+app.MapFallbackToFile("index.html");
+
 app.Run();
 
 public partial class Program { }

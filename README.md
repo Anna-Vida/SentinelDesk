@@ -146,7 +146,9 @@ VITE_API_BASE_URL=http://localhost:5043
 
 ## Production configuration
 
-Set the frontend API URL:
+For the single-service Docker deployment, the React app uses the same public origin as the API automatically.
+
+If you deploy the frontend separately, set the frontend API URL:
 
 ```env
 VITE_API_BASE_URL=https://your-api.example.com
@@ -220,3 +222,16 @@ GET/WS /hubs/security
 **Sole Developer / Full-Stack Developer**
 
 I designed and implemented SentinelDesk end to end, including the ASP.NET Core API, PostgreSQL data model, Entity Framework migrations, incident workflow rules, SignalR real-time events, React/TypeScript dashboard, typed API clients, analytics, responsive UI, and development/CI setup.
+
+
+## Free single-service deployment
+
+The repository includes a root `Dockerfile` that builds the React frontend and ASP.NET Core backend into one container. For low-cost/free hosting where multiple services are unavailable, set:
+
+```text
+ConnectionStrings__DefaultConnection=Data Source=/data/sentineldesk.db
+Jwt__Key=<long random secret>
+ASPNETCORE_ENVIRONMENT=Production
+```
+
+Mount persistent storage at `/data`. The API serves the built React application, REST endpoints, and SignalR from the same public origin.

@@ -1,6 +1,9 @@
 import { clearAuthSession, getAuthSession } from '../auth/session'
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5043').replace(/\/$/, '')
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5043')
+).replace(/\/$/, '')
 
 export class ApiError extends Error {
   constructor(message: string, public status: number, public details?: unknown) {
