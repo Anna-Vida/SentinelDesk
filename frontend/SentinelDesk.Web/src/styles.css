@@ -7,3 +7,12 @@
 .analytics-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.analytics-list{padding:20px 22px;display:grid;gap:20px}.analytics-row{display:grid;gap:8px}.analytics-row-head{display:flex;align-items:center;justify-content:space-between;gap:16px;color:#a9bbc9;font-size:12px}.analytics-row-head strong{font:13px ui-monospace,monospace;color:#dce8f4}.analytics-bar{height:7px;background:#13283b;border:1px solid #20394f;border-radius:999px;overflow:hidden}.analytics-bar span{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--blue));border-radius:inherit;transition:width .35s ease}.analytics-row small{color:#60788d;font:9px ui-monospace,monospace;text-transform:uppercase;letter-spacing:.6px}
 @media(max-width:900px){.analytics-grid{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.analytics-bar span{transition:none}}
+
+
+/* Security event workflow completion */
+.form-grid{display:grid;gap:14px}.form-grid.two-column{grid-template-columns:repeat(2,minmax(0,1fr))}
+.field-hint{font-size:10px;color:var(--muted);font-weight:400}.optional{color:var(--muted);font-weight:400;font-size:10px}
+.event-filters{align-items:center}.button.small{padding:6px 10px;font-size:10px}.table-actions{text-align:right;white-space:nowrap}
+.linked-case{font:10px ui-monospace,monospace;color:var(--cyan);padding:4px 7px;border:1px solid #28695f;border-radius:4px;background:#13332f}
+.compact-modal{width:min(500px,100%)}.compact-state{min-height:120px}.compact-state strong{color:#dce8f4}
+@media(max-width:720px){.form-grid.two-column{grid-template-columns:1fr}.event-filters label:not(.search){flex-basis:100%}}

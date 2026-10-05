@@ -1,20 +1,25 @@
 import type { ConnectionState } from '../types'
 
-export type Section = 'Dashboard' | 'Incidents' | 'Security Events' | 'Analytics' | 'Settings'
+export type Section = 'Dashboard' | 'Incidents' | 'Security Events' | 'Analytics'
 
 const nav: Array<{ name: Section; icon: string }> = [
-  { name: 'Dashboard', icon: '⌁' }, { name: 'Incidents', icon: '△' },
-  { name: 'Security Events', icon: '◎' }, { name: 'Analytics', icon: '⌗' }, { name: 'Settings', icon: '⚙' },
+  { name: 'Dashboard', icon: '⌁' },
+  { name: 'Incidents', icon: '△' },
+  { name: 'Security Events', icon: '◎' },
+  { name: 'Analytics', icon: '⌗' },
 ]
 
 export function Layout({ section, onNavigate, connection, children }: {
-  section: Section; onNavigate: (section: Section) => void; connection: ConnectionState; children: React.ReactNode
+  section: Section
+  onNavigate: (section: Section) => void
+  connection: ConnectionState
+  children: React.ReactNode
 }) {
   return <div className="app-shell">
     <aside className="sidebar">
       <div className="brand-mark"><span className="brand-shield">S</span><div><strong>SentinelDesk</strong><small>SECURITY OPERATIONS</small></div></div>
       <nav aria-label="Primary navigation">
-        {nav.map((item) => <button key={item.name} className={section === item.name ? 'active' : ''} onClick={() => onNavigate(item.name)}>
+        {nav.map((item) => <button key={item.name} className={section === item.name ? 'active' : ''} aria-current={section === item.name ? 'page' : undefined} onClick={() => onNavigate(item.name)}>
           <span aria-hidden="true">{item.icon}</span>{item.name}{item.name === 'Security Events' && <i className="live-dot" />}
         </button>)}
       </nav>
