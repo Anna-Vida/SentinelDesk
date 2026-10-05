@@ -1,20 +1,35 @@
 # SentinelDesk Web
 
-React and TypeScript security operations dashboard for the SentinelDesk API.
+React + TypeScript + Vite frontend for the SentinelDesk security operations platform.
 
-## Local development
+## Development
 
-1. Copy `.env.example` to `.env` and adjust `VITE_API_BASE_URL` if needed.
-2. Start the backend at `http://localhost:5043`.
-3. Install and run the frontend:
+Start the ASP.NET Core API first at `http://localhost:5043`, then:
 
-   ```bash
-   npm install
-   npm run dev
-   ```
+```powershell
+npm install
+npm run dev
+```
 
-The app runs at `http://localhost:5173`. Production assets can be checked with
-`npm run build`.
+The frontend runs at `http://localhost:5173`.
 
-The dashboard consumes the REST API and subscribes to `/hubs/security` for live
-incident and security-event updates. No polling is used.
+## Environment
+
+Copy `.env.example` to `.env` when you need to override the backend URL:
+
+```env
+VITE_API_BASE_URL=http://localhost:5043
+```
+
+For deployment, set `VITE_API_BASE_URL` to the public HTTPS address of the ASP.NET Core API.
+
+## Commands
+
+```powershell
+npm run dev
+npm run build
+npm run lint
+npm run preview
+```
+
+The app uses one reusable SignalR connection to `/hubs/security` and reacts to the backend's incident and security-event broadcasts without polling.

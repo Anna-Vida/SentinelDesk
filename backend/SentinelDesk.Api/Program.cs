@@ -5,27 +5,32 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-const string DevelopmentCorsPolicy = "DevelopmentCors";
+const string ApplicationCorsPolicy = "ApplicationCors";
 
-// Centralised Problem Details responses (RFC 7807) — no stack traces exposed.
 builder.Services.AddProblemDetails();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        // Return and accept enums as strings ("High", "Open") instead of integers.
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 
 builder.Services.AddSignalR();
 
-if (builder.Environment.IsDevelopment())
+var configuredOrigins = (builder.Configuration["Cors:AllowedOrigins"] ?? string.Empty)
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+var allowedOrigins = builder.Environment.IsDevelopment()
+    ? configuredOrigins.Append("http://localhost:5173").Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
+    : configuredOrigins;
+
+if (allowedOrigins.Length > 0)
 {
     builder.Services.AddCors(options =>
     {
-        options.AddPolicy(DevelopmentCorsPolicy, policy =>
+        options.AddPolicy(ApplicationCorsPolicy, policy =>
         {
-            policy.WithOrigins("http://localhost:5173")
+            policy.WithOrigins(allowedOrigins)
                   .AllowAnyHeader()
                   .AllowAnyMethod()
                   .AllowCredentials();
@@ -45,12 +50,14 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    app.UseCors(DevelopmentCorsPolicy);
 }
 
-// Turns unhandled exceptions into Problem Details responses.
+if (allowedOrigins.Length > 0)
+{
+    app.UseCors(ApplicationCorsPolicy);
+}
+
 app.UseExceptionHandler();
-// Turns bare 4xx/5xx status codes into Problem Details.
 app.UseStatusCodePages();
 
 app.UseAuthorization();

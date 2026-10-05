@@ -1,67 +1,199 @@
 # SentinelDesk
 
-SentinelDesk is a real-time cybersecurity incident management platform. Security teams will use it to review alerts, investigate incidents, assign analysts, and track resolution work.
+SentinelDesk is a real-time cybersecurity incident management platform built as a full-stack portfolio project. It models a lightweight Security Operations Center (SOC) workflow: analysts can create and triage incidents, move them through a controlled response lifecycle, ingest security telemetry, correlate events to incidents, and watch updates appear live through SignalR.
 
-## Current milestone
+## Stack
 
-The initial backend is an ASP.NET Core Web API. The React frontend and database integration will follow in later milestones.
+- **Backend:** C# · .NET 10 · ASP.NET Core Web API
+- **Data:** PostgreSQL · Entity Framework Core · Npgsql
+- **Real time:** ASP.NET Core SignalR
+- **Frontend:** React 19 · TypeScript · Vite
+- **Quality:** OpenAPI · Problem Details · GitHub Actions CI
+
+Everything used by the project is available with free/open-source tooling for local development.
+
+## Features
+
+### Incident management
+
+- Create, retrieve, update, search, filter, and paginate incidents
+- Severity levels: Low, Medium, High, Critical
+- Controlled response lifecycle:
+  `Open → Investigating → Contained → Resolved → Closed`
+- Invalid status jumps return `409 Conflict`
+- Soft archiving preserves incident history
+- Archived incidents cannot be edited or moved through the workflow
+
+### Security telemetry
+
+- Record security events with source IP, description, and risk score
+- Risk score validation from 0–100
+- Optionally associate an event with an incident at creation time
+- Link or relink existing events to active incidents
+- Filter the frontend event stream by text and minimum risk
+
+### Real-time operations
+
+The SignalR hub at `/hubs/security` broadcasts:
+
+- `IncidentCreated`
+- `IncidentUpdated`
+- `IncidentStatusChanged`
+- `IncidentArchived`
+- `SecurityEventCreated`
+- `SecurityEventLinked`
+
+Connected browser sessions update without polling or a page refresh.
+
+### SOC dashboard
+
+- Live connection-state indicator
+- Incident and telemetry metrics
+- Recent incident queue
+- Live security-event feed
+- Searchable/filterable incident management
+- Security-event creation and correlation
+- Operational analytics for status, severity, risk, and linkage
+- Responsive dark SOC interface with loading, error, and empty states
+
+## Repository structure
 
 ```text
 SentinelDesk/
 ├── backend/
-│   └── SentinelDesk.Api/    # ASP.NET Core Web API (.NET 10)
-├── frontend/                # Planned React + Vite application
-└── README.md
+│   └── SentinelDesk.Api/
+│       ├── Contracts/
+│       ├── Controllers/
+│       ├── Data/
+│       │   └── Migrations/
+│       ├── Hubs/
+│       └── Models/
+├── frontend/
+│   └── SentinelDesk.Web/
+│       └── src/
+│           ├── api/
+│           ├── components/
+│           ├── hooks/
+│           ├── pages/
+│           ├── types/
+│           └── utils/
+└── .github/
+    └── workflows/
+        └── ci.yml
 ```
 
-## Prerequisites
+## Local setup
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- VS Code with the C# Dev Kit extension
+### Prerequisites
 
-## Run the API
+- .NET 10 SDK
+- Node.js 22 or later
+- PostgreSQL
+- Git
+
+### 1. Database
+
+Create a PostgreSQL database named `sentineldesk`.
+
+Store the development connection string with .NET User Secrets:
+
+```powershell
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=sentineldesk;Username=postgres;Password=YOUR_PASSWORD" --project backend/SentinelDesk.Api
+```
+
+Apply the existing migrations:
+
+```powershell
+dotnet ef database update --project backend/SentinelDesk.Api --startup-project backend/SentinelDesk.Api
+```
+
+### 2. Run the API
 
 ```powershell
 dotnet run --project backend/SentinelDesk.Api
 ```
 
-The API starts at `http://localhost:5043` by default.
+Development endpoints:
 
-- Health check: `GET /api/health`
-- Development OpenAPI document: `GET /openapi/v1.json`
+- API: `http://localhost:5043`
+- Health: `GET http://localhost:5043/api/health`
+- OpenAPI: `http://localhost:5043/openapi/v1.json`
+- SignalR: `http://localhost:5043/hubs/security`
 
-For example:
+### 3. Run the frontend
 
 ```powershell
-Invoke-RestMethod http://localhost:5043/api/health
+cd frontend/SentinelDesk.Web
+npm install
+npm run dev
 ```
 
-## Planned delivery order
+Open `http://localhost:5173`.
 
-1. C# and ASP.NET Core fundamentals
-2. PostgreSQL and Entity Framework Core
-3. Authentication and role-based access control
-4. React dashboard and incident workflows
-5. SignalR real-time events
-6. Tests, documentation, and deployment polish
+The default frontend API URL is configured in `.env.example`:
 
+```env
+VITE_API_BASE_URL=http://localhost:5043
+```
 
-## My Contribution
+## Production configuration
 
-**Role: Sole Developer / Full-Stack Developer**
+Set the frontend API URL:
 
-I designed and built **SentinelDesk independently as a full-stack project**. I was responsible for the frontend, backend API, database integration, real-time communication, application structure, and development workflow.
+```env
+VITE_API_BASE_URL=https://your-api.example.com
+```
 
-My work includes:
+Set the backend PostgreSQL connection string using your hosting provider's secret/environment configuration.
 
-- ASP.NET Core Web API development with C# and .NET 10
-- PostgreSQL integration through Entity Framework Core and Npgsql
-- Incident models, contracts, controllers, and data access structure
-- SignalR-based real-time communication
-- React 19 + TypeScript frontend development
-- Typed REST API clients and frontend state handling
-- Incident creation, retrieval, updates, status transitions, and archival workflows
-- Responsive incident-management interface
-- Frontend/backend integration and local development setup
+To allow the deployed frontend to call the API and connect to SignalR, set:
 
-This repository represents my work as the **sole developer responsible for both the frontend and backend implementation**.
+```text
+Cors__AllowedOrigins=https://your-frontend.example.com
+```
+
+Multiple origins can be supplied as a comma-separated list. Credentials are enabled for SignalR, so SentinelDesk intentionally uses an explicit origin allowlist instead of wildcard CORS.
+
+## Verification
+
+Backend:
+
+```powershell
+dotnet build SentinelDesk.slnx
+```
+
+Frontend:
+
+```powershell
+cd frontend/SentinelDesk.Web
+npm run build
+npm run lint
+```
+
+GitHub Actions runs backend build plus frontend build/lint automatically on pushes and pull requests targeting `main`.
+
+## API overview
+
+```text
+GET    /api/health
+
+GET    /api/incidents
+GET    /api/incidents/{id}
+POST   /api/incidents
+PUT    /api/incidents/{id}
+PATCH  /api/incidents/{id}/status
+DELETE /api/incidents/{id}
+
+GET    /api/security-events
+GET    /api/security-events/{id}
+POST   /api/security-events
+PATCH  /api/security-events/{eventId}/incident/{incidentId}
+
+GET/WS /hubs/security
+```
+
+## Project role
+
+**Sole Developer / Full-Stack Developer**
+
+I designed and implemented SentinelDesk end to end, including the ASP.NET Core API, PostgreSQL data model, Entity Framework migrations, incident workflow rules, SignalR real-time events, React/TypeScript dashboard, typed API clients, analytics, responsive UI, and development/CI setup.

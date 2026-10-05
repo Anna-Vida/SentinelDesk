@@ -150,6 +150,15 @@ public sealed class IncidentsController(
         if (incident is null)
             return NotFound();
 
+        if (incident.IsArchived)
+            return Conflict(new ProblemDetails
+            {
+                Title = "Incident is archived",
+                Detail = "Archived incidents cannot be edited.",
+                Status = StatusCodes.Status409Conflict,
+                Instance = HttpContext.Request.Path
+            });
+
         incident.Title = request.Title.Trim();
         incident.Description = request.Description.Trim();
         incident.Severity = request.Severity;
@@ -249,6 +258,9 @@ public sealed class IncidentsController(
 
         if (incident is null)
             return NotFound();
+
+        if (incident.IsArchived)
+            return NoContent();
 
         var now = DateTime.UtcNow;
         incident.IsArchived = true;
