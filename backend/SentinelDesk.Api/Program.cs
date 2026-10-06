@@ -167,6 +167,26 @@ using (var scope = app.Services.CreateScope())
 
             command.CommandText = "CREATE INDEX IF NOT EXISTS IX_Incidents_EndpointId ON Incidents (EndpointId);";
             await command.ExecuteNonQueryAsync();
+
+            command.CommandText = """
+                CREATE TABLE IF NOT EXISTS DetectionRules (
+                    Id TEXT NOT NULL PRIMARY KEY,
+                    RuleKey TEXT NOT NULL,
+                    Name TEXT NOT NULL,
+                    Description TEXT NOT NULL,
+                    IsEnabled INTEGER NOT NULL DEFAULT 1,
+                    Severity TEXT NOT NULL,
+                    TriggerCount INTEGER NOT NULL,
+                    WindowMinutes INTEGER NOT NULL,
+                    RiskScore INTEGER NOT NULL,
+                    MatchPatterns TEXT NOT NULL,
+                    UpdatedAt TEXT NOT NULL
+                );
+                """;
+            await command.ExecuteNonQueryAsync();
+
+            command.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS IX_DetectionRules_RuleKey ON DetectionRules (RuleKey);";
+            await command.ExecuteNonQueryAsync();
         }
         finally
         {
@@ -176,6 +196,55 @@ using (var scope = app.Services.CreateScope())
     else
     {
         await database.Database.MigrateAsync();
+    }
+
+    if (!await database.DetectionRules.AnyAsync())
+    {
+        var now = DateTime.UtcNow;
+        database.DetectionRules.AddRange(
+            new DetectionRule
+            {
+                Id = Guid.NewGuid(),
+                RuleKey = DetectionRuleKeys.FailedLogonBurst,
+                Name = "Repeated failed logons",
+                Description = "Creates an incident when multiple Windows failed-logon events arrive from the same source.",
+                IsEnabled = true,
+                Severity = IncidentSeverity.High,
+                TriggerCount = 5,
+                WindowMinutes = 5,
+                RiskScore = 55,
+                MatchPatterns = string.Empty,
+                UpdatedAt = now
+            },
+            new DetectionRule
+            {
+                Id = Guid.NewGuid(),
+                RuleKey = DetectionRuleKeys.SuspiciousPowerShell,
+                Name = "Suspicious PowerShell",
+                Description = "Detects high-risk PowerShell script-block content using configurable command patterns.",
+                IsEnabled = true,
+                Severity = IncidentSeverity.Critical,
+                TriggerCount = 1,
+                WindowMinutes = 5,
+                RiskScore = 92,
+                MatchPatterns = "-encodedcommand\nfrombase64string\ndownloadstring\ninvoke-expression\ninvoke-webrequest\niex \niwr \ncertutil\nbitsadmin",
+                UpdatedAt = now
+            },
+            new DetectionRule
+            {
+                Id = Guid.NewGuid(),
+                RuleKey = DetectionRuleKeys.SuspiciousProcess,
+                Name = "Suspicious process execution",
+                Description = "Detects Windows process-creation command lines matching configurable high-risk patterns.",
+                IsEnabled = true,
+                Severity = IncidentSeverity.High,
+                TriggerCount = 1,
+                WindowMinutes = 5,
+                RiskScore = 88,
+                MatchPatterns = "powershell.exe -enc\npowershell.exe -encodedcommand\npwsh.exe -enc\ncertutil -urlcache\nbitsadmin /transfer\nrundll32 javascript:\nregsvr32 /s /n /u /i:",
+                UpdatedAt = now
+            });
+        await database.SaveChangesAsync();
     }
 }
 

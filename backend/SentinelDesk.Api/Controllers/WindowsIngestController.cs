@@ -20,30 +20,6 @@ public sealed class WindowsIngestController(
     IHubContext<SecurityHub> hubContext,
     IConfiguration configuration) : ControllerBase
 {
-    private static readonly string[] SuspiciousPowerShellTerms =
-    [
-        "-encodedcommand",
-        "frombase64string",
-        "downloadstring",
-        "invoke-expression",
-        "invoke-webrequest",
-        "iex ",
-        "iwr ",
-        "certutil",
-        "bitsadmin"
-    ];
-
-    private static readonly string[] SuspiciousProcessTerms =
-    [
-        "powershell.exe -enc",
-        "powershell.exe -encodedcommand",
-        "pwsh.exe -enc",
-        "certutil -urlcache",
-        "bitsadmin /transfer",
-        "rundll32 javascript:",
-        "regsvr32 /s /n /u /i:"
-    ];
-
     [AllowAnonymous]
     [HttpPost("heartbeat")]
     public async Task<ActionResult<WindowsHeartbeatResponse>> Heartbeat(
@@ -97,6 +73,14 @@ public sealed class WindowsIngestController(
         if (!endpoint.IsEnabled)
             return StatusCode(StatusCodes.Status403Forbidden, new ProblemDetails { Title = "This endpoint is disabled in SentinelDesk." });
 
+        var rules = await dbContext.DetectionRules
+            .AsNoTracking()
+            .ToDictionaryAsync(rule => rule.RuleKey, cancellationToken);
+
+        rules.TryGetValue(DetectionRuleKeys.FailedLogonBurst, out var failedLogonRule);
+        rules.TryGetValue(DetectionRuleKeys.SuspiciousPowerShell, out var powerShellRule);
+        rules.TryGetValue(DetectionRuleKeys.SuspiciousProcess, out var processRule);
+
         var now = DateTime.UtcNow;
         var createdEvents = new List<SecurityEvent>();
         var createdIncidents = new List<Incident>();
@@ -108,7 +92,7 @@ public sealed class WindowsIngestController(
                 message = message[..3000];
 
             var commandLine = (source.CommandLine ?? string.Empty).Trim();
-            var risk = CalculateRisk(source.EventId, message, commandLine);
+            var risk = CalculateRisk(source.EventId, message, commandLine, failedLogonRule, powerShellRule, processRule);
             var eventType = source.EventId switch
             {
                 4625 => "Windows Failed Logon",
@@ -133,45 +117,47 @@ public sealed class WindowsIngestController(
             createdEvents.Add(securityEvent);
         }
 
-        var suspiciousPowerShell = createdEvents
-            .Where(evt => evt.EventType == "PowerShell Script Block" && evt.RiskScore >= 80)
-            .ToList();
+        var suspiciousPowerShell = powerShellRule is { IsEnabled: true }
+            ? createdEvents.Where(evt => evt.EventType == "PowerShell Script Block" && evt.RiskScore >= powerShellRule.RiskScore).ToList()
+            : [];
 
-        if (suspiciousPowerShell.Count > 0)
+        if (suspiciousPowerShell.Count >= (powerShellRule?.TriggerCount ?? int.MaxValue))
         {
             var incident = CreateIncident(
                 endpoint,
                 "Suspicious PowerShell activity",
                 "Windows PowerShell Script Block Logging reported command content matching SentinelDesk high-risk detection rules.",
-                IncidentSeverity.Critical,
+                powerShellRule!.Severity,
                 now);
 
             LinkEvents(incident, suspiciousPowerShell);
             createdIncidents.Add(incident);
         }
 
-        var suspiciousProcesses = createdEvents
-            .Where(evt => evt.EventType == "Windows Process Created" && evt.RiskScore >= 80)
-            .ToList();
+        var suspiciousProcesses = processRule is { IsEnabled: true }
+            ? createdEvents.Where(evt => evt.EventType == "Windows Process Created" && evt.RiskScore >= processRule.RiskScore).ToList()
+            : [];
 
-        if (suspiciousProcesses.Count > 0)
+        if (suspiciousProcesses.Count >= (processRule?.TriggerCount ?? int.MaxValue))
         {
             var incident = CreateIncident(
                 endpoint,
                 "Suspicious process execution",
                 "Windows process creation auditing reported a command line matching SentinelDesk high-risk execution rules.",
-                IncidentSeverity.High,
+                processRule!.Severity,
                 now);
 
             LinkEvents(incident, suspiciousProcesses);
             createdIncidents.Add(incident);
         }
 
-        var failedLogonSourceRecords = request.Events
-            .Where(evt => evt.EventId == 4625)
-            .GroupBy(evt => NormalizeSourceIp(evt.SourceIp))
-            .Where(group => group.Count() >= 5)
-            .ToList();
+        var failedLogonSourceRecords = failedLogonRule is { IsEnabled: true }
+            ? request.Events
+                .Where(evt => evt.EventId == 4625)
+                .GroupBy(evt => NormalizeSourceIp(evt.SourceIp))
+                .Where(group => group.Count() >= failedLogonRule.TriggerCount)
+                .ToList()
+            : [];
 
         foreach (var group in failedLogonSourceRecords)
         {
@@ -186,7 +172,7 @@ public sealed class WindowsIngestController(
                 endpoint,
                 $"Repeated failed logons from {group.Key}",
                 $"Windows reported {group.Count()} failed logons from the same source in one collector batch.",
-                IncidentSeverity.High,
+                failedLogonRule!.Severity,
                 now);
 
             LinkEvents(incident, matchingEvents);
@@ -369,20 +355,31 @@ public sealed class WindowsIngestController(
         return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
     }
 
-    private static int CalculateRisk(int eventId, string message, string commandLine)
+    private static int CalculateRisk(
+        int eventId,
+        string message,
+        string commandLine,
+        DetectionRule? failedLogonRule,
+        DetectionRule? powerShellRule,
+        DetectionRule? processRule)
     {
         var combined = $"{message} {commandLine}";
 
         return eventId switch
         {
-            4625 => 55,
-            4104 when ContainsAny(combined, SuspiciousPowerShellTerms) => 92,
+            4625 => failedLogonRule?.RiskScore ?? 55,
+            4104 when powerShellRule is not null && ContainsAny(combined, SplitPatterns(powerShellRule.MatchPatterns))
+                => powerShellRule.RiskScore,
             4104 => 35,
-            4688 when ContainsAny(combined, SuspiciousProcessTerms) => 88,
+            4688 when processRule is not null && ContainsAny(combined, SplitPatterns(processRule.MatchPatterns))
+                => processRule.RiskScore,
             4688 => 25,
             _ => 20
         };
     }
+
+    private static IEnumerable<string> SplitPatterns(string patterns) =>
+        patterns.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     private static bool ContainsAny(string value, IEnumerable<string> terms) =>
         terms.Any(term => value.Contains(term, StringComparison.OrdinalIgnoreCase));

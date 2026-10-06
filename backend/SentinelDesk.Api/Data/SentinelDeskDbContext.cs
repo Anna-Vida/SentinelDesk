@@ -7,6 +7,8 @@ public sealed class SentinelDeskDbContext(DbContextOptions<SentinelDeskDbContext
 {
     public DbSet<AppUser> Users => Set<AppUser>();
 
+    public DbSet<DetectionRule> DetectionRules => Set<DetectionRule>();
+
     public DbSet<SentinelDesk.Api.Models.Endpoint> Endpoints => Set<SentinelDesk.Api.Models.Endpoint>();
 
     public DbSet<Incident> Incidents => Set<Incident>();
@@ -28,6 +30,23 @@ public sealed class SentinelDeskDbContext(DbContextOptions<SentinelDeskDbContext
             entity.Property(user => user.IsApproved).IsRequired().HasDefaultValue(true);
             entity.Property(user => user.CreatedAt).HasColumnType("timestamp with time zone").IsRequired();
             entity.HasIndex(user => user.Email).IsUnique();
+        });
+
+        modelBuilder.Entity<DetectionRule>(entity =>
+        {
+            entity.ToTable("DetectionRules");
+            entity.HasKey(rule => rule.Id);
+            entity.Property(rule => rule.RuleKey).HasMaxLength(100).IsRequired();
+            entity.Property(rule => rule.Name).HasMaxLength(150).IsRequired();
+            entity.Property(rule => rule.Description).HasMaxLength(1_000).IsRequired();
+            entity.Property(rule => rule.IsEnabled).IsRequired().HasDefaultValue(true);
+            entity.Property(rule => rule.Severity).HasConversion<string>().HasMaxLength(20).IsRequired();
+            entity.Property(rule => rule.TriggerCount).IsRequired();
+            entity.Property(rule => rule.WindowMinutes).IsRequired();
+            entity.Property(rule => rule.RiskScore).IsRequired();
+            entity.Property(rule => rule.MatchPatterns).HasMaxLength(4_000).IsRequired();
+            entity.Property(rule => rule.UpdatedAt).HasColumnType("timestamp with time zone").IsRequired();
+            entity.HasIndex(rule => rule.RuleKey).IsUnique();
         });
 
         modelBuilder.Entity<SentinelDesk.Api.Models.Endpoint>(entity =>
