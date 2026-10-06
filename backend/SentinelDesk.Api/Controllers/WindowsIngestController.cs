@@ -44,6 +44,34 @@ public sealed class WindowsIngestController(
     ];
 
     [AllowAnonymous]
+    [HttpPost("heartbeat")]
+    public async Task<ActionResult<WindowsHeartbeatResponse>> Heartbeat(
+        WindowsHeartbeatRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!HasValidAgentKey())
+            return Unauthorized();
+
+        if (string.IsNullOrWhiteSpace(request.ComputerName))
+            return BadRequest(new ProblemDetails { Title = "Computer name is required." });
+
+        var endpoint = await UpsertEndpointAsync(
+            request.ComputerName,
+            request.OsName,
+            request.OsVersion,
+            request.AgentVersion,
+            cancellationToken);
+
+        if (!endpoint.IsEnabled)
+            return StatusCode(StatusCodes.Status403Forbidden, new ProblemDetails { Title = "This endpoint is disabled in SentinelDesk." });
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await BroadcastEndpointAsync(endpoint, cancellationToken);
+
+        return Ok(new WindowsHeartbeatResponse(endpoint.Id, endpoint.ComputerName, endpoint.LastSeenAt, endpoint.IsEnabled));
+    }
+
+    [AllowAnonymous]
     [HttpPost]
     public async Task<ActionResult<WindowsIngestResponse>> Ingest(
         WindowsEventBatchRequest request,
@@ -57,6 +85,16 @@ public sealed class WindowsIngestController(
 
         if (request.Events.Count is < 1 or > 200)
             return BadRequest(new ProblemDetails { Title = "Send between 1 and 200 events per batch." });
+
+        var endpoint = await UpsertEndpointAsync(
+            request.ComputerName,
+            request.OsName,
+            request.OsVersion,
+            request.AgentVersion,
+            cancellationToken);
+
+        if (!endpoint.IsEnabled)
+            return StatusCode(StatusCodes.Status403Forbidden, new ProblemDetails { Title = "This endpoint is disabled in SentinelDesk." });
 
         var now = DateTime.UtcNow;
         var createdEvents = new List<SecurityEvent>();
@@ -81,6 +119,7 @@ public sealed class WindowsIngestController(
             var securityEvent = new SecurityEvent
             {
                 Id = Guid.NewGuid(),
+                EndpointId = endpoint.Id,
                 EventType = eventType,
                 SourceIp = NormalizeSourceIp(source.SourceIp),
                 Description = BuildDescription(request.ComputerName, source, message, commandLine),
@@ -100,7 +139,7 @@ public sealed class WindowsIngestController(
         if (suspiciousPowerShell.Count > 0)
         {
             var incident = CreateIncident(
-                request.ComputerName,
+                endpoint,
                 "Suspicious PowerShell activity",
                 "Windows PowerShell Script Block Logging reported command content matching SentinelDesk high-risk detection rules.",
                 IncidentSeverity.Critical,
@@ -117,7 +156,7 @@ public sealed class WindowsIngestController(
         if (suspiciousProcesses.Count > 0)
         {
             var incident = CreateIncident(
-                request.ComputerName,
+                endpoint,
                 "Suspicious process execution",
                 "Windows process creation auditing reported a command line matching SentinelDesk high-risk execution rules.",
                 IncidentSeverity.High,
@@ -143,7 +182,7 @@ public sealed class WindowsIngestController(
                 continue;
 
             var incident = CreateIncident(
-                request.ComputerName,
+                endpoint,
                 $"Repeated failed logons from {group.Key}",
                 $"Windows reported {group.Count()} failed logons from the same source in one collector batch.",
                 IncidentSeverity.High,
@@ -155,6 +194,8 @@ public sealed class WindowsIngestController(
 
         dbContext.Incidents.AddRange(createdIncidents);
         dbContext.SecurityEvents.AddRange(createdEvents);
+
+        endpoint.LastEventAt = createdEvents.Max(evt => evt.DetectedAt);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         foreach (var incident in createdIncidents)
@@ -186,10 +227,13 @@ public sealed class WindowsIngestController(
                 cancellationToken);
         }
 
+        await BroadcastEndpointAsync(endpoint, cancellationToken);
+
         return Accepted(new WindowsIngestResponse(
             createdEvents.Count,
             createdIncidents.Count,
-            createdEvents.Max(evt => evt.DetectedAt)));
+            createdEvents.Max(evt => evt.DetectedAt),
+            endpoint.Id));
     }
 
     [Authorize(Roles = RoleNames.Admin)]
@@ -242,6 +286,62 @@ public sealed class WindowsIngestController(
             "https://raw.githubusercontent.com/Anna-Vida/SentinelDesk/main/agents/windows/SentinelDeskAgent.ps1"));
     }
 
+    private async Task<Endpoint> UpsertEndpointAsync(
+        string computerName,
+        string? osName,
+        string? osVersion,
+        string? agentVersion,
+        CancellationToken cancellationToken)
+    {
+        var normalizedName = computerName.Trim();
+        var now = DateTime.UtcNow;
+        var endpoint = await dbContext.Endpoints
+            .SingleOrDefaultAsync(
+                item => item.ComputerName.ToLower() == normalizedName.ToLower(),
+                cancellationToken);
+
+        if (endpoint is null)
+        {
+            endpoint = new Endpoint
+            {
+                Id = Guid.NewGuid(),
+                ComputerName = normalizedName,
+                OsName = Clean(osName, 255),
+                OsVersion = Clean(osVersion, 100),
+                AgentVersion = Clean(agentVersion, 50),
+                LastIpAddress = Request.HttpContext.Connection.RemoteIpAddress?.ToString(),
+                IsEnabled = true,
+                FirstSeenAt = now,
+                LastSeenAt = now
+            };
+            dbContext.Endpoints.Add(endpoint);
+        }
+        else
+        {
+            endpoint.OsName = Clean(osName, 255) ?? endpoint.OsName;
+            endpoint.OsVersion = Clean(osVersion, 100) ?? endpoint.OsVersion;
+            endpoint.AgentVersion = Clean(agentVersion, 50) ?? endpoint.AgentVersion;
+            endpoint.LastIpAddress = Request.HttpContext.Connection.RemoteIpAddress?.ToString() ?? endpoint.LastIpAddress;
+            endpoint.LastSeenAt = now;
+        }
+
+        return endpoint;
+    }
+
+    private async Task BroadcastEndpointAsync(Endpoint endpoint, CancellationToken cancellationToken)
+    {
+        await hubContext.Clients.All.SendAsync(
+            SecurityHubEvents.EndpointUpdated,
+            new EndpointUpdatedMessage(
+                endpoint.Id,
+                endpoint.ComputerName,
+                endpoint.IsEnabled,
+                endpoint.LastSeenAt,
+                endpoint.LastEventAt,
+                endpoint.AgentVersion),
+            cancellationToken);
+    }
+
     private bool HasValidAgentKey()
     {
         var expected = configuration["Ingestion:ApiKey"];
@@ -255,7 +355,17 @@ public sealed class WindowsIngestController(
         var expectedBytes = Encoding.UTF8.GetBytes(expected);
         var suppliedBytes = Encoding.UTF8.GetBytes(supplied);
 
-        return CryptographicOperations.FixedTimeEquals(expectedBytes, suppliedBytes);
+        return expectedBytes.Length == suppliedBytes.Length &&
+               CryptographicOperations.FixedTimeEquals(expectedBytes, suppliedBytes);
+    }
+
+    private static string? Clean(string? value, int maxLength)
+    {
+        var trimmed = value?.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+            return null;
+
+        return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
     }
 
     private static int CalculateRisk(int eventId, string message, string commandLine)
@@ -302,7 +412,7 @@ public sealed class WindowsIngestController(
     }
 
     private static Incident CreateIncident(
-        string computerName,
+        Endpoint endpoint,
         string title,
         string description,
         IncidentSeverity severity,
@@ -310,7 +420,8 @@ public sealed class WindowsIngestController(
         new()
         {
             Id = Guid.NewGuid(),
-            Title = $"[WINDOWS] {title} — {computerName}",
+            EndpointId = endpoint.Id,
+            Title = $"[WINDOWS] {title} — {endpoint.ComputerName}",
             Description = description,
             Severity = severity,
             Status = IncidentStatus.Open,
@@ -326,9 +437,20 @@ public sealed class WindowsIngestController(
     }
 }
 
+public sealed class WindowsHeartbeatRequest
+{
+    public string ComputerName { get; init; } = string.Empty;
+    public string? OsName { get; init; }
+    public string? OsVersion { get; init; }
+    public string? AgentVersion { get; init; }
+}
+
 public sealed class WindowsEventBatchRequest
 {
     public string ComputerName { get; init; } = string.Empty;
+    public string? OsName { get; init; }
+    public string? OsVersion { get; init; }
+    public string? AgentVersion { get; init; }
     public IReadOnlyList<WindowsEventRecordRequest> Events { get; init; } = [];
 }
 
@@ -346,10 +468,17 @@ public sealed class WindowsEventRecordRequest
     public string? CommandLine { get; init; }
 }
 
+public sealed record WindowsHeartbeatResponse(
+    Guid EndpointId,
+    string ComputerName,
+    DateTime LastSeenAt,
+    bool IsEnabled);
+
 public sealed record WindowsIngestResponse(
     int AcceptedEvents,
     int CreatedIncidents,
-    DateTime LatestEventAt);
+    DateTime LatestEventAt,
+    Guid EndpointId);
 
 public sealed record WindowsCollectorStatusResponse(
     bool Configured,

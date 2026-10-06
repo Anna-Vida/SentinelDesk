@@ -7,6 +7,8 @@ public sealed class SentinelDeskDbContext(DbContextOptions<SentinelDeskDbContext
 {
     public DbSet<AppUser> Users => Set<AppUser>();
 
+    public DbSet<Endpoint> Endpoints => Set<Endpoint>();
+
     public DbSet<Incident> Incidents => Set<Incident>();
 
     public DbSet<SecurityEvent> SecurityEvents => Set<SecurityEvent>();
@@ -26,6 +28,23 @@ public sealed class SentinelDeskDbContext(DbContextOptions<SentinelDeskDbContext
             entity.Property(user => user.IsApproved).IsRequired().HasDefaultValue(true);
             entity.Property(user => user.CreatedAt).HasColumnType("timestamp with time zone").IsRequired();
             entity.HasIndex(user => user.Email).IsUnique();
+        });
+
+        modelBuilder.Entity<Endpoint>(entity =>
+        {
+            entity.ToTable("Endpoints");
+            entity.HasKey(endpoint => endpoint.Id);
+            entity.Property(endpoint => endpoint.ComputerName).HasMaxLength(255).IsRequired();
+            entity.Property(endpoint => endpoint.OsName).HasMaxLength(255);
+            entity.Property(endpoint => endpoint.OsVersion).HasMaxLength(100);
+            entity.Property(endpoint => endpoint.AgentVersion).HasMaxLength(50);
+            entity.Property(endpoint => endpoint.LastIpAddress).HasMaxLength(45);
+            entity.Property(endpoint => endpoint.IsEnabled).IsRequired().HasDefaultValue(true);
+            entity.Property(endpoint => endpoint.FirstSeenAt).HasColumnType("timestamp with time zone").IsRequired();
+            entity.Property(endpoint => endpoint.LastSeenAt).HasColumnType("timestamp with time zone").IsRequired();
+            entity.Property(endpoint => endpoint.LastEventAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(endpoint => endpoint.ComputerName).IsUnique();
+            entity.HasIndex(endpoint => endpoint.LastSeenAt);
         });
 
         modelBuilder.Entity<Incident>(entity =>
@@ -53,6 +72,13 @@ public sealed class SentinelDeskDbContext(DbContextOptions<SentinelDeskDbContext
             entity.HasIndex(incident => incident.Severity);
             entity.HasIndex(incident => incident.CreatedAt);
             entity.HasIndex(incident => incident.IsArchived);
+            entity.HasIndex(incident => incident.EndpointId);
+
+            entity.HasOne(incident => incident.Endpoint)
+                  .WithMany(endpoint => endpoint.Incidents)
+                  .HasForeignKey(incident => incident.EndpointId)
+                  .IsRequired(false)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<SecurityEvent>(entity =>
@@ -67,6 +93,13 @@ public sealed class SentinelDeskDbContext(DbContextOptions<SentinelDeskDbContext
 
             entity.HasIndex(securityEvent => securityEvent.DetectedAt);
             entity.HasIndex(securityEvent => securityEvent.IncidentId);
+            entity.HasIndex(securityEvent => securityEvent.EndpointId);
+
+            entity.HasOne(securityEvent => securityEvent.Endpoint)
+                  .WithMany(endpoint => endpoint.SecurityEvents)
+                  .HasForeignKey(securityEvent => securityEvent.EndpointId)
+                  .IsRequired(false)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

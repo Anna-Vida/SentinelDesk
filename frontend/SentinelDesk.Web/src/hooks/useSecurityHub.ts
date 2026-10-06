@@ -9,7 +9,7 @@ export type RealtimeEvent = {
 
 const eventNames = [
   'IncidentCreated', 'IncidentUpdated', 'IncidentStatusChanged',
-  'IncidentArchived', 'SecurityEventCreated', 'SecurityEventLinked',
+  'IncidentArchived', 'SecurityEventCreated', 'SecurityEventLinked', 'EndpointUpdated',
 ] as const
 
 export function useSecurityHub(onEvent: (event: RealtimeEvent) => void, accessToken: string | null) {

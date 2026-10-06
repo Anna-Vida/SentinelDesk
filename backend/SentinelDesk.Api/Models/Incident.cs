@@ -22,6 +22,10 @@ public sealed class Incident
 
     public DateTime UpdatedAt { get; set; }
 
+    public Guid? EndpointId { get; set; }
+
+    public Endpoint? Endpoint { get; set; }
+
     /// <summary>Security events linked to this incident.</summary>
     public ICollection<SecurityEvent> SecurityEvents { get; set; } = [];
 }

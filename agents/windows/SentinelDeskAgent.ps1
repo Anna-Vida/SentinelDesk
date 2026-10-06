@@ -17,6 +17,17 @@ $ErrorActionPreference = 'Stop'
 
 $stateDirectory = Join-Path $env:ProgramData 'SentinelDesk'
 $statePath = Join-Path $stateDirectory 'collector-state.json'
+$agentVersion = '1.2.0'
+
+try {
+    $osInfo = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop
+    $osName = [string]$osInfo.Caption
+    $osVersion = [string]$osInfo.Version
+}
+catch {
+    $osName = 'Windows'
+    $osVersion = [System.Environment]::OSVersion.Version.ToString()
+}
 
 if (-not (Test-Path $stateDirectory)) {
     New-Item -ItemType Directory -Path $stateDirectory -Force | Out-Null
@@ -194,6 +205,26 @@ function Get-PowerShellEvents([long]$AfterRecordId) {
     return $events
 }
 
+function Send-Heartbeat {
+    $headers = @{
+        'X-Sentinel-Key' = $ApiKey
+    }
+
+    $body = @{
+        computerName = $env:COMPUTERNAME
+        osName = $osName
+        osVersion = $osVersion
+        agentVersion = $agentVersion
+    } | ConvertTo-Json
+
+    $endpoint = "$($ApiUrl.TrimEnd('/'))/api/ingest/windows/heartbeat"
+    $result = Invoke-RestMethod -Method Post -Uri $endpoint -Headers $headers -ContentType 'application/json' -Body $body -ErrorAction Stop
+
+    if ($null -ne $result -and $result.PSObject.Properties['lastSeenAt']) {
+        Write-Host "$(Get-Date -Format T) - Heartbeat sent for $env:COMPUTERNAME."
+    }
+}
+
 function Send-Batch([array]$Events) {
     if ($Events.Count -eq 0) {
         Write-Host "$(Get-Date -Format T) - No new monitored Windows events."
@@ -202,6 +233,9 @@ function Send-Batch([array]$Events) {
 
     $body = @{
         computerName = $env:COMPUTERNAME
+        osName = $osName
+        osVersion = $osVersion
+        agentVersion = $agentVersion
         events = $Events
     } | ConvertTo-Json -Depth 6
 
@@ -232,6 +266,7 @@ if ($EnableAudit) {
 }
 
 do {
+    Send-Heartbeat
     $state = Read-State
     $security = @(Get-SecurityEvents -AfterRecordId $state.Security)
     $powerShell = @(Get-PowerShellEvents -AfterRecordId $state.PowerShell)

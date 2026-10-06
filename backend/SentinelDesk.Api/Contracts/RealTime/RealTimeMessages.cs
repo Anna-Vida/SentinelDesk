@@ -44,3 +44,13 @@ public sealed record SecurityEventLinkedMessage(
     Guid IncidentId,
     DateTime LinkedAt
 );
+
+
+public sealed record EndpointUpdatedMessage(
+    Guid Id,
+    string ComputerName,
+    bool IsEnabled,
+    DateTime LastSeenAt,
+    DateTime? LastEventAt,
+    string? AgentVersion
+);

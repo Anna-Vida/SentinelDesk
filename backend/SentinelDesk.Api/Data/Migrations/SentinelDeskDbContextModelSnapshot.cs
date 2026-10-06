@@ -64,6 +64,57 @@ namespace SentinelDesk.Api.Data.Migrations
                     b.ToTable("Users", (string)null);
                 });
 
+            modelBuilder.Entity("SentinelDesk.Api.Models.Endpoint", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AgentVersion")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("ComputerName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("FirstSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime?>("LastEventAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastIpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)");
+
+                    b.Property<DateTime>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("OsName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("OsVersion")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ComputerName")
+                        .IsUnique();
+
+                    b.HasIndex("LastSeenAt");
+
+                    b.ToTable("Endpoints", (string)null);
+                });
+
             modelBuilder.Entity("SentinelDesk.Api.Models.Incident", b =>
                 {
                     b.Property<Guid>("Id")
@@ -80,6 +131,9 @@ namespace SentinelDesk.Api.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
+
+                    b.Property<Guid?>("EndpointId")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsArchived")
                         .ValueGeneratedOnAdd()
@@ -108,6 +162,8 @@ namespace SentinelDesk.Api.Data.Migrations
 
                     b.HasIndex("CreatedAt");
 
+                    b.HasIndex("EndpointId");
+
                     b.HasIndex("IsArchived");
 
                     b.HasIndex("Severity");
@@ -127,6 +183,9 @@ namespace SentinelDesk.Api.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
+
+                    b.Property<Guid?>("EndpointId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DetectedAt")
                         .HasColumnType("timestamp with time zone");
@@ -151,19 +210,45 @@ namespace SentinelDesk.Api.Data.Migrations
 
                     b.HasIndex("DetectedAt");
 
+                    b.HasIndex("EndpointId");
+
                     b.HasIndex("IncidentId");
 
                     b.ToTable("SecurityEvents", (string)null);
                 });
 
+            modelBuilder.Entity("SentinelDesk.Api.Models.Incident", b =>
+                {
+                    b.HasOne("SentinelDesk.Api.Models.Endpoint", "Endpoint")
+                        .WithMany("Incidents")
+                        .HasForeignKey("EndpointId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Endpoint");
+                });
+
             modelBuilder.Entity("SentinelDesk.Api.Models.SecurityEvent", b =>
                 {
+                    b.HasOne("SentinelDesk.Api.Models.Endpoint", "Endpoint")
+                        .WithMany("SecurityEvents")
+                        .HasForeignKey("EndpointId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("SentinelDesk.Api.Models.Incident", "Incident")
                         .WithMany("SecurityEvents")
                         .HasForeignKey("IncidentId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.Navigation("Endpoint");
+
                     b.Navigation("Incident");
+                });
+
+            modelBuilder.Entity("SentinelDesk.Api.Models.Endpoint", b =>
+                {
+                    b.Navigation("Incidents");
+
+                    b.Navigation("SecurityEvents");
                 });
 
             modelBuilder.Entity("SentinelDesk.Api.Models.Incident", b =>

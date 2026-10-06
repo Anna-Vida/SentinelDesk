@@ -64,6 +64,7 @@ export interface RealtimeEvents {
   IncidentArchived: { incidentId: string; archivedAt: string }
   SecurityEventCreated: SecurityEvent
   SecurityEventLinked: { eventId: string; incidentId: string; linkedAt: string }
+  EndpointUpdated: { id: string; computerName: string; isEnabled: boolean; lastSeenAt: string; lastEventAt: string | null; agentVersion: string | null }
 }
 
 export enum UserRole {
@@ -110,4 +111,22 @@ export interface ThreatIntelResponse {
   knownRansomwareCount: number
   latestDateAdded: string | null
   items: ThreatIntelItem[]
+}
+
+
+export interface EndpointSummary {
+  id: string
+  computerName: string
+  osName: string | null
+  osVersion: string | null
+  agentVersion: string | null
+  lastIpAddress: string | null
+  isEnabled: boolean
+  isOnline: boolean
+  firstSeenAt: string
+  lastSeenAt: string
+  lastEventAt: string | null
+  eventsLast24Hours: number
+  highRiskEventsLast24Hours: number
+  openIncidents: number
 }

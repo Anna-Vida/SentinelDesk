@@ -10,6 +10,7 @@ import { useSecurityHub, type RealtimeEvent } from './hooks/useSecurityHub'
 import { AgentsPage } from './pages/AgentsPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { EndpointsPage } from './pages/EndpointsPage'
 import { IncidentsPage } from './pages/IncidentsPage'
 import { SecurityEventsPage } from './pages/SecurityEventsPage'
 import { ThreatIntelPage } from './pages/ThreatIntelPage'
@@ -85,6 +86,7 @@ export default function App() {
   >
     {section === 'Dashboard' && <DashboardPage incidents={incidents} events={events} loading={loading} error={error} onRetry={loadData} onSelect={setSelected} onNewIncident={() => setCreating(true)} canManage={canManage} />}
     {section === 'Incidents' && <IncidentsPage revision={revision} onSelect={setSelected} onNewIncident={() => setCreating(true)} canManage={canManage} />}
+    {section === 'Endpoints' && <EndpointsPage revision={revision} isAdmin={session.user.role === UserRole.Admin} />}
     {section === 'Security Events' && <SecurityEventsPage events={events} incidents={incidents} loading={loading} error={error} onRetry={loadData} onCreated={upsertSecurityEvent} onLinked={upsertSecurityEvent} canManage={canManage} />}
     {section === 'Threat Intel' && <ThreatIntelPage />}
     {section === 'Analytics' && <AnalyticsPage incidents={incidents} events={events} loading={loading} error={error} onRetry={loadData} />}

@@ -14,6 +14,10 @@ public sealed class SecurityEvent
 
     public DateTime DetectedAt { get; set; }
 
+    public Guid? EndpointId { get; set; }
+
+    public Endpoint? Endpoint { get; set; }
+
     /// <summary>Optional link to an incident. Null if the event has not been associated yet.</summary>
     public Guid? IncidentId { get; set; }
 

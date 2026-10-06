@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Laptop,
   MonitorCog,
   Plus,
   RadioTower,
@@ -22,7 +23,7 @@ import {
 } from 'lucide-react'
 import { UserRole, type AuthUser, type ConnectionState, type Incident, type SecurityEvent } from '../types'
 
-export type Section = 'Dashboard' | 'Incidents' | 'Security Events' | 'Threat Intel' | 'Analytics' | 'Windows Agent' | 'Users'
+export type Section = 'Dashboard' | 'Incidents' | 'Security Events' | 'Endpoints' | 'Threat Intel' | 'Analytics' | 'Windows Agent' | 'Users'
 
 type NavItem = {
   name: Section
@@ -34,6 +35,7 @@ const monitoringNav: NavItem[] = [
   { name: 'Dashboard', icon: LayoutDashboard },
   { name: 'Incidents', icon: ShieldAlert },
   { name: 'Security Events', icon: RadioTower, badge: 'LIVE' },
+  { name: 'Endpoints', icon: Laptop },
   { name: 'Threat Intel', icon: Shield, badge: 'CISA' },
   { name: 'Analytics', icon: BarChart3 },
 ]

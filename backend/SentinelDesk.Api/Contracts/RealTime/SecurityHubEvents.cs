@@ -11,4 +11,5 @@ public static class SecurityHubEvents
     public const string IncidentArchived = "IncidentArchived";
     public const string SecurityEventCreated = "SecurityEventCreated";
     public const string SecurityEventLinked = "SecurityEventLinked";
+    public const string EndpointUpdated = "EndpointUpdated";
 }
