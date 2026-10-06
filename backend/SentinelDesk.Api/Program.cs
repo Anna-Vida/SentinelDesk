@@ -121,6 +121,52 @@ using (var scope = app.Services.CreateScope())
                 command.CommandText = "ALTER TABLE Users ADD COLUMN IsApproved INTEGER NOT NULL DEFAULT 1;";
                 await command.ExecuteNonQueryAsync();
             }
+
+            command.CommandText = """
+                CREATE TABLE IF NOT EXISTS Endpoints (
+                    Id TEXT NOT NULL PRIMARY KEY,
+                    ComputerName TEXT NOT NULL,
+                    OsName TEXT NULL,
+                    OsVersion TEXT NULL,
+                    AgentVersion TEXT NULL,
+                    LastIpAddress TEXT NULL,
+                    IsEnabled INTEGER NOT NULL DEFAULT 1,
+                    FirstSeenAt TEXT NOT NULL,
+                    LastSeenAt TEXT NOT NULL,
+                    LastEventAt TEXT NULL
+                );
+                """;
+            await command.ExecuteNonQueryAsync();
+
+            command.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS IX_Endpoints_ComputerName ON Endpoints (ComputerName);";
+            await command.ExecuteNonQueryAsync();
+
+            command.CommandText = "CREATE INDEX IF NOT EXISTS IX_Endpoints_LastSeenAt ON Endpoints (LastSeenAt);";
+            await command.ExecuteNonQueryAsync();
+
+            command.CommandText = "SELECT COUNT(*) FROM pragma_table_info('SecurityEvents') WHERE name = 'EndpointId';";
+            var hasSecurityEventEndpointColumn = Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
+
+            if (!hasSecurityEventEndpointColumn)
+            {
+                command.CommandText = "ALTER TABLE SecurityEvents ADD COLUMN EndpointId TEXT NULL;";
+                await command.ExecuteNonQueryAsync();
+            }
+
+            command.CommandText = "CREATE INDEX IF NOT EXISTS IX_SecurityEvents_EndpointId ON SecurityEvents (EndpointId);";
+            await command.ExecuteNonQueryAsync();
+
+            command.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Incidents') WHERE name = 'EndpointId';";
+            var hasIncidentEndpointColumn = Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
+
+            if (!hasIncidentEndpointColumn)
+            {
+                command.CommandText = "ALTER TABLE Incidents ADD COLUMN EndpointId TEXT NULL;";
+                await command.ExecuteNonQueryAsync();
+            }
+
+            command.CommandText = "CREATE INDEX IF NOT EXISTS IX_Incidents_EndpointId ON Incidents (EndpointId);";
+            await command.ExecuteNonQueryAsync();
         }
         finally
         {
