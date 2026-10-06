@@ -17,13 +17,14 @@ import {
   Search,
   Shield,
   ShieldAlert,
+  SlidersHorizontal,
   Users,
   X,
   type LucideIcon,
 } from 'lucide-react'
 import { UserRole, type AuthUser, type ConnectionState, type Incident, type SecurityEvent } from '../types'
 
-export type Section = 'Dashboard' | 'Incidents' | 'Security Events' | 'Endpoints' | 'Threat Intel' | 'Analytics' | 'Windows Agent' | 'Users'
+export type Section = 'Dashboard' | 'Incidents' | 'Security Events' | 'Endpoints' | 'Threat Intel' | 'Analytics' | 'Detection Rules' | 'Windows Agent' | 'Users'
 
 type NavItem = {
   name: Section
@@ -41,6 +42,7 @@ const monitoringNav: NavItem[] = [
 ]
 
 const administrationNav: NavItem[] = [
+  { name: 'Detection Rules', icon: SlidersHorizontal },
   { name: 'Windows Agent', icon: MonitorCog },
   { name: 'Users', icon: Users },
 ]

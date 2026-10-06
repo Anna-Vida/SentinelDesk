@@ -130,3 +130,18 @@ export interface EndpointSummary {
   highRiskEventsLast24Hours: number
   openIncidents: number
 }
+
+
+export interface DetectionRule {
+  id: string
+  ruleKey: string
+  name: string
+  description: string
+  isEnabled: boolean
+  severity: IncidentSeverity
+  triggerCount: number
+  windowMinutes: number
+  riskScore: number
+  matchPatterns: string
+  updatedAt: string
+}

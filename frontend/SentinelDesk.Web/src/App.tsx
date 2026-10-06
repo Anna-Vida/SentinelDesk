@@ -10,6 +10,7 @@ import { useSecurityHub, type RealtimeEvent } from './hooks/useSecurityHub'
 import { AgentsPage } from './pages/AgentsPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { DetectionRulesPage } from './pages/DetectionRulesPage'
 import { EndpointsPage } from './pages/EndpointsPage'
 import { IncidentsPage } from './pages/IncidentsPage'
 import { SecurityEventsPage } from './pages/SecurityEventsPage'
@@ -90,6 +91,7 @@ export default function App() {
     {section === 'Security Events' && <SecurityEventsPage events={events} incidents={incidents} loading={loading} error={error} onRetry={loadData} onCreated={upsertSecurityEvent} onLinked={upsertSecurityEvent} canManage={canManage} />}
     {section === 'Threat Intel' && <ThreatIntelPage />}
     {section === 'Analytics' && <AnalyticsPage incidents={incidents} events={events} loading={loading} error={error} onRetry={loadData} />}
+    {section === 'Detection Rules' && session.user.role === UserRole.Admin && <DetectionRulesPage />}
     {section === 'Windows Agent' && session.user.role === UserRole.Admin && <AgentsPage />}
     {section === 'Users' && session.user.role === UserRole.Admin && <UsersPage />}
     {canManage && creating && <IncidentForm onClose={() => setCreating(false)} onCreated={(item) => { upsertIncident(item); setRevision((value) => value + 1) }} />}
