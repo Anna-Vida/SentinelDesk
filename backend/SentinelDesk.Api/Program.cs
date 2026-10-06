@@ -187,6 +187,44 @@ using (var scope = app.Services.CreateScope())
 
             command.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS IX_DetectionRules_RuleKey ON DetectionRules (RuleKey);";
             await command.ExecuteNonQueryAsync();
+
+            command.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Incidents') WHERE name = 'AssignedToUserId';";
+            var hasAssignedUserColumn = Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
+            if (!hasAssignedUserColumn)
+            {
+                command.CommandText = "ALTER TABLE Incidents ADD COLUMN AssignedToUserId TEXT NULL;";
+                await command.ExecuteNonQueryAsync();
+            }
+
+            command.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Incidents') WHERE name = 'AssignedToDisplayName';";
+            var hasAssignedNameColumn = Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
+            if (!hasAssignedNameColumn)
+            {
+                command.CommandText = "ALTER TABLE Incidents ADD COLUMN AssignedToDisplayName TEXT NULL;";
+                await command.ExecuteNonQueryAsync();
+            }
+
+            command.CommandText = "CREATE INDEX IF NOT EXISTS IX_Incidents_AssignedToUserId ON Incidents (AssignedToUserId);";
+            await command.ExecuteNonQueryAsync();
+
+            command.CommandText = """
+                CREATE TABLE IF NOT EXISTS IncidentActivities (
+                    Id TEXT NOT NULL PRIMARY KEY,
+                    IncidentId TEXT NOT NULL,
+                    ActivityType TEXT NOT NULL,
+                    Message TEXT NOT NULL,
+                    ActorUserId TEXT NULL,
+                    ActorDisplayName TEXT NOT NULL,
+                    CreatedAt TEXT NOT NULL,
+                    FOREIGN KEY (IncidentId) REFERENCES Incidents (Id) ON DELETE CASCADE
+                );
+                """;
+            await command.ExecuteNonQueryAsync();
+
+            command.CommandText = "CREATE INDEX IF NOT EXISTS IX_IncidentActivities_IncidentId ON IncidentActivities (IncidentId);";
+            await command.ExecuteNonQueryAsync();
+            command.CommandText = "CREATE INDEX IF NOT EXISTS IX_IncidentActivities_CreatedAt ON IncidentActivities (CreatedAt);";
+            await command.ExecuteNonQueryAsync();
         }
         finally
         {

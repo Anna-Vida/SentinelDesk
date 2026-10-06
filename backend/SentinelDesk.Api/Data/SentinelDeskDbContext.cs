@@ -13,6 +13,8 @@ public sealed class SentinelDeskDbContext(DbContextOptions<SentinelDeskDbContext
 
     public DbSet<Incident> Incidents => Set<Incident>();
 
+    public DbSet<IncidentActivity> IncidentActivities => Set<IncidentActivity>();
+
     public DbSet<SecurityEvent> SecurityEvents => Set<SecurityEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -78,6 +80,7 @@ public sealed class SentinelDeskDbContext(DbContextOptions<SentinelDeskDbContext
             entity.Property(incident => incident.ArchivedAt).HasColumnType("timestamp with time zone");
             entity.Property(incident => incident.CreatedAt).HasColumnType("timestamp with time zone").IsRequired();
             entity.Property(incident => incident.UpdatedAt).HasColumnType("timestamp with time zone").IsRequired();
+            entity.Property(incident => incident.AssignedToDisplayName).HasMaxLength(100);
 
             // One incident has many security events; events survive if the incident is archived.
             entity.HasMany(incident => incident.SecurityEvents)
@@ -92,12 +95,30 @@ public sealed class SentinelDeskDbContext(DbContextOptions<SentinelDeskDbContext
             entity.HasIndex(incident => incident.CreatedAt);
             entity.HasIndex(incident => incident.IsArchived);
             entity.HasIndex(incident => incident.EndpointId);
+            entity.HasIndex(incident => incident.AssignedToUserId);
 
             entity.HasOne(incident => incident.Endpoint)
                   .WithMany(endpoint => endpoint.Incidents)
                   .HasForeignKey(incident => incident.EndpointId)
                   .IsRequired(false)
                   .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<IncidentActivity>(entity =>
+        {
+            entity.ToTable("IncidentActivities");
+            entity.HasKey(activity => activity.Id);
+            entity.Property(activity => activity.ActivityType).HasMaxLength(50).IsRequired();
+            entity.Property(activity => activity.Message).HasMaxLength(2_000).IsRequired();
+            entity.Property(activity => activity.ActorDisplayName).HasMaxLength(100).IsRequired();
+            entity.Property(activity => activity.CreatedAt).HasColumnType("timestamp with time zone").IsRequired();
+            entity.HasIndex(activity => activity.IncidentId);
+            entity.HasIndex(activity => activity.CreatedAt);
+
+            entity.HasOne(activity => activity.Incident)
+                  .WithMany(incident => incident.Activities)
+                  .HasForeignKey(activity => activity.IncidentId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<SecurityEvent>(entity =>

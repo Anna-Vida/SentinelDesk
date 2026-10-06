@@ -414,8 +414,9 @@ public sealed class WindowsIngestController(
         string title,
         string description,
         IncidentSeverity severity,
-        DateTime createdAt) =>
-        new()
+        DateTime createdAt)
+    {
+        var incident = new Incident
         {
             Id = Guid.NewGuid(),
             EndpointId = endpoint.Id,
@@ -427,6 +428,20 @@ public sealed class WindowsIngestController(
             CreatedAt = createdAt,
             UpdatedAt = createdAt
         };
+
+        incident.Activities.Add(new IncidentActivity
+        {
+            Id = Guid.NewGuid(),
+            IncidentId = incident.Id,
+            ActivityType = IncidentActivityTypes.Detection,
+            Message = "Incident created automatically from Windows telemetry by the SentinelDesk detection engine.",
+            ActorUserId = null,
+            ActorDisplayName = "SentinelDesk Detection Engine",
+            CreatedAt = createdAt
+        });
+
+        return incident;
+    }
 
     private static void LinkEvents(Incident incident, IEnumerable<SecurityEvent> events)
     {

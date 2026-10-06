@@ -26,6 +26,12 @@ public sealed class Incident
 
     public Endpoint? Endpoint { get; set; }
 
+    public Guid? AssignedToUserId { get; set; }
+
+    public string? AssignedToDisplayName { get; set; }
+
     /// <summary>Security events linked to this incident.</summary>
     public ICollection<SecurityEvent> SecurityEvents { get; set; } = [];
+
+    public ICollection<IncidentActivity> Activities { get; set; } = [];
 }

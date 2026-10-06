@@ -14,7 +14,9 @@ public sealed record IncidentUpdatedMessage(
     string Title,
     string Description,
     string Severity,
-    DateTime UpdatedAt
+    DateTime UpdatedAt,
+    Guid? AssignedToUserId = null,
+    string? AssignedToDisplayName = null
 );
 
 public sealed record IncidentStatusChangedMessage(

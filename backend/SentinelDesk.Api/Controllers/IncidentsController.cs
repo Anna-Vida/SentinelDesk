@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -108,6 +109,7 @@ public sealed class IncidentsController(
         };
 
         dbContext.Incidents.Add(incident);
+        AddActivity(incident, IncidentActivityTypes.Created, "Incident created.");
         await dbContext.SaveChangesAsync(cancellationToken);
 
         await TryBroadcastAsync(
@@ -157,6 +159,7 @@ public sealed class IncidentsController(
         incident.Description = request.Description.Trim();
         incident.Severity = request.Severity;
         incident.UpdatedAt = DateTime.UtcNow;
+        AddActivity(incident, IncidentActivityTypes.Updated, "Incident details updated.");
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -217,6 +220,10 @@ public sealed class IncidentsController(
         var previousStatus = incident.Status;
         incident.Status = request.NewStatus;
         incident.UpdatedAt = DateTime.UtcNow;
+        AddActivity(
+            incident,
+            IncidentActivityTypes.StatusChanged,
+            $"Status changed from {previousStatus} to {incident.Status}.");
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -255,6 +262,7 @@ public sealed class IncidentsController(
         incident.IsArchived = true;
         incident.ArchivedAt = now;
         incident.UpdatedAt = now;
+        AddActivity(incident, IncidentActivityTypes.Archived, "Incident archived.");
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -267,6 +275,145 @@ public sealed class IncidentsController(
             cancellationToken);
 
         return NoContent();
+    }
+
+    [Authorize(Roles = RoleNames.AnalystOrAdmin)]
+    [HttpGet("assignees")]
+    public async Task<ActionResult<IReadOnlyList<IncidentAssigneeResponse>>> GetAssignees(
+        CancellationToken cancellationToken)
+    {
+        var users = await dbContext.Users
+            .AsNoTracking()
+            .Where(user => user.IsApproved && (user.Role == UserRole.Analyst || user.Role == UserRole.Admin))
+            .OrderBy(user => user.DisplayName)
+            .Select(user => new IncidentAssigneeResponse(user.Id, user.DisplayName, user.Email, user.Role.ToString()))
+            .ToListAsync(cancellationToken);
+
+        return Ok(users);
+    }
+
+    [HttpGet("{id:guid}/timeline")]
+    public async Task<ActionResult<IReadOnlyList<IncidentActivityResponse>>> GetTimeline(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        if (!await dbContext.Incidents.AsNoTracking().AnyAsync(item => item.Id == id, cancellationToken))
+            return NotFound();
+
+        var timeline = await dbContext.IncidentActivities
+            .AsNoTracking()
+            .Where(activity => activity.IncidentId == id)
+            .OrderByDescending(activity => activity.CreatedAt)
+            .Select(activity => new IncidentActivityResponse(
+                activity.Id,
+                activity.ActivityType,
+                activity.Message,
+                activity.ActorUserId,
+                activity.ActorDisplayName,
+                activity.CreatedAt))
+            .ToListAsync(cancellationToken);
+
+        return Ok(timeline);
+    }
+
+    [Authorize(Roles = RoleNames.AnalystOrAdmin)]
+    [HttpPatch("{id:guid}/assignment")]
+    public async Task<ActionResult<Incident>> Assign(
+        Guid id,
+        AssignIncidentRequest request,
+        CancellationToken cancellationToken)
+    {
+        var incident = await dbContext.Incidents.SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
+        if (incident is null) return NotFound();
+        if (incident.IsArchived) return Conflict(new ProblemDetails { Title = "Archived incidents cannot be assigned." });
+
+        string assignmentMessage;
+        if (request.UserId is null)
+        {
+            incident.AssignedToUserId = null;
+            incident.AssignedToDisplayName = null;
+            assignmentMessage = "Incident unassigned.";
+        }
+        else
+        {
+            var assignee = await dbContext.Users.AsNoTracking().SingleOrDefaultAsync(
+                user => user.Id == request.UserId && user.IsApproved &&
+                        (user.Role == UserRole.Analyst || user.Role == UserRole.Admin),
+                cancellationToken);
+
+            if (assignee is null)
+                return BadRequest(new ProblemDetails { Title = "Assignee must be an approved Analyst or Admin." });
+
+            incident.AssignedToUserId = assignee.Id;
+            incident.AssignedToDisplayName = assignee.DisplayName;
+            assignmentMessage = $"Incident assigned to {assignee.DisplayName}.";
+        }
+
+        incident.UpdatedAt = DateTime.UtcNow;
+        AddActivity(incident, IncidentActivityTypes.AssignmentChanged, assignmentMessage);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        await TryBroadcastAsync(
+            SecurityHubEvents.IncidentUpdated,
+            new IncidentUpdatedMessage(
+                incident.Id,
+                incident.Title,
+                incident.Description,
+                incident.Severity.ToString(),
+                incident.UpdatedAt,
+                incident.AssignedToUserId,
+                incident.AssignedToDisplayName),
+            cancellationToken);
+
+        return Ok(incident);
+    }
+
+    [Authorize(Roles = RoleNames.AnalystOrAdmin)]
+    [HttpPost("{id:guid}/notes")]
+    public async Task<ActionResult<IncidentActivityResponse>> AddNote(
+        Guid id,
+        AddIncidentNoteRequest request,
+        CancellationToken cancellationToken)
+    {
+        var incident = await dbContext.Incidents.SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
+        if (incident is null) return NotFound();
+        if (incident.IsArchived) return Conflict(new ProblemDetails { Title = "Archived incidents cannot receive notes." });
+
+        var message = request.Message?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(message) || message.Length > 2000)
+            return BadRequest(new ProblemDetails { Title = "Note must contain between 1 and 2000 characters." });
+
+        var activity = AddActivity(incident, IncidentActivityTypes.Note, message);
+        incident.UpdatedAt = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return Ok(new IncidentActivityResponse(
+            activity.Id,
+            activity.ActivityType,
+            activity.Message,
+            activity.ActorUserId,
+            activity.ActorDisplayName,
+            activity.CreatedAt));
+    }
+
+    private IncidentActivity AddActivity(Incident incident, string activityType, string message)
+    {
+        var actorId = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var parsed) ? parsed : (Guid?)null;
+        var actorName = User.Identity?.Name ?? "SentinelDesk";
+
+        var activity = new IncidentActivity
+        {
+            Id = Guid.NewGuid(),
+            IncidentId = incident.Id,
+            ActivityType = activityType,
+            Message = message,
+            ActorUserId = actorId,
+            ActorDisplayName = actorName,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        dbContext.IncidentActivities.Add(activity);
+        return activity;
     }
 
     private async Task TryBroadcastAsync(string eventName, object message, CancellationToken cancellationToken)
@@ -282,3 +429,15 @@ public sealed class IncidentsController(
         }
     }
 }
+
+
+public sealed record IncidentAssigneeResponse(Guid Id, string DisplayName, string Email, string Role);
+public sealed record AssignIncidentRequest(Guid? UserId);
+public sealed record AddIncidentNoteRequest(string? Message);
+public sealed record IncidentActivityResponse(
+    Guid Id,
+    string ActivityType,
+    string Message,
+    Guid? ActorUserId,
+    string ActorDisplayName,
+    DateTime CreatedAt);
