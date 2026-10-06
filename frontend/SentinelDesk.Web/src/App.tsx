@@ -71,7 +71,18 @@ export default function App() {
   const canArchive = session.user.role === UserRole.Admin
   const removeIncident = (id: string) => { setIncidents((items) => items.filter((item) => item.id !== id)); setRevision((value) => value + 1) }
 
-  return <Layout section={section} onNavigate={setSection} connection={connection} user={session.user} onLogout={logout}>
+  return <Layout
+    section={section}
+    onNavigate={setSection}
+    connection={connection}
+    user={session.user}
+    onLogout={logout}
+    incidents={incidents}
+    events={events}
+    canManage={canManage}
+    onNewIncident={() => setCreating(true)}
+    onRefresh={loadData}
+  >
     {section === 'Dashboard' && <DashboardPage incidents={incidents} events={events} loading={loading} error={error} onRetry={loadData} onSelect={setSelected} onNewIncident={() => setCreating(true)} canManage={canManage} />}
     {section === 'Incidents' && <IncidentsPage revision={revision} onSelect={setSelected} onNewIncident={() => setCreating(true)} canManage={canManage} />}
     {section === 'Security Events' && <SecurityEventsPage events={events} incidents={incidents} loading={loading} error={error} onRetry={loadData} onCreated={upsertSecurityEvent} onLinked={upsertSecurityEvent} canManage={canManage} />}
