@@ -170,7 +170,9 @@ public sealed class IncidentsController(
                 incident.Title,
                 incident.Description,
                 incident.Severity.ToString(),
-                incident.UpdatedAt
+                incident.UpdatedAt,
+                incident.AssignedToUserId,
+                incident.AssignedToDisplayName
             ),
             cancellationToken);
 

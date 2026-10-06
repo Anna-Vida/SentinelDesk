@@ -1,5 +1,5 @@
 import { apiRequest } from './client'
-import type { Incident, IncidentInput, IncidentQuery, PagedResponse } from '../types'
+import type { Incident, IncidentActivity, IncidentAssignee, IncidentInput, IncidentQuery, PagedResponse } from '../types'
 import { IncidentStatus } from '../types'
 
 export function getIncidents(query: IncidentQuery = {}) {
@@ -15,3 +15,22 @@ export const createIncident = (input: IncidentInput) => apiRequest<Incident>('/a
 export const updateIncident = (id: string, input: IncidentInput) => apiRequest<Incident>(`/api/incidents/${id}`, { method: 'PUT', body: JSON.stringify(input) })
 export const changeIncidentStatus = (id: string, newStatus: IncidentStatus) => apiRequest<Incident>(`/api/incidents/${id}/status`, { method: 'PATCH', body: JSON.stringify({ newStatus }) })
 export const archiveIncident = (id: string) => apiRequest<void>(`/api/incidents/${id}`, { method: 'DELETE' })
+
+
+export const getIncidentTimeline = (id: string) =>
+  apiRequest<IncidentActivity[]>(`/api/incidents/${id}/timeline`)
+
+export const getIncidentAssignees = () =>
+  apiRequest<IncidentAssignee[]>('/api/incidents/assignees')
+
+export const assignIncident = (id: string, userId: string | null) =>
+  apiRequest<Incident>(`/api/incidents/${id}/assignment`, {
+    method: 'PATCH',
+    body: JSON.stringify({ userId }),
+  })
+
+export const addIncidentNote = (id: string, message: string) =>
+  apiRequest<IncidentActivity>(`/api/incidents/${id}/notes`, {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  })

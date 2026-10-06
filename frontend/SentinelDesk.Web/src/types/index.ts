@@ -23,6 +23,8 @@ export interface Incident {
   archivedAt: string | null
   createdAt: string
   updatedAt: string
+  assignedToUserId: string | null
+  assignedToDisplayName: string | null
 }
 
 export interface SecurityEvent {
@@ -59,7 +61,7 @@ export type ConnectionState = 'Connected' | 'Reconnecting' | 'Disconnected'
 
 export interface RealtimeEvents {
   IncidentCreated: IncidentInput & { id: string; status: IncidentStatus; createdAt: string }
-  IncidentUpdated: IncidentInput & { id: string; updatedAt: string }
+  IncidentUpdated: IncidentInput & { id: string; updatedAt: string; assignedToUserId: string | null; assignedToDisplayName: string | null }
   IncidentStatusChanged: { incidentId: string; previousStatus: IncidentStatus; newStatus: IncidentStatus; updatedAt: string }
   IncidentArchived: { incidentId: string; archivedAt: string }
   SecurityEventCreated: SecurityEvent
@@ -144,4 +146,21 @@ export interface DetectionRule {
   riskScore: number
   matchPatterns: string
   updatedAt: string
+}
+
+
+export interface IncidentActivity {
+  id: string
+  activityType: string
+  message: string
+  actorUserId: string | null
+  actorDisplayName: string
+  createdAt: string
+}
+
+export interface IncidentAssignee {
+  id: string
+  displayName: string
+  email: string
+  role: string
 }
