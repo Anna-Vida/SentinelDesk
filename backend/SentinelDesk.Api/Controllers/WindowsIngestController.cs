@@ -9,6 +9,7 @@ using SentinelDesk.Api.Data;
 using SentinelDesk.Api.Hubs;
 using SentinelDesk.Api.Models;
 using SentinelDesk.Api.Security;
+using ManagedEndpoint = SentinelDesk.Api.Models.Endpoint;
 
 namespace SentinelDesk.Api.Controllers;
 
@@ -286,7 +287,7 @@ public sealed class WindowsIngestController(
             "https://raw.githubusercontent.com/Anna-Vida/SentinelDesk/main/agents/windows/SentinelDeskAgent.ps1"));
     }
 
-    private async Task<Endpoint> UpsertEndpointAsync(
+    private async Task<ManagedEndpoint> UpsertEndpointAsync(
         string computerName,
         string? osName,
         string? osVersion,
@@ -302,7 +303,7 @@ public sealed class WindowsIngestController(
 
         if (endpoint is null)
         {
-            endpoint = new Endpoint
+            endpoint = new ManagedEndpoint
             {
                 Id = Guid.NewGuid(),
                 ComputerName = normalizedName,
@@ -328,7 +329,7 @@ public sealed class WindowsIngestController(
         return endpoint;
     }
 
-    private async Task BroadcastEndpointAsync(Endpoint endpoint, CancellationToken cancellationToken)
+    private async Task BroadcastEndpointAsync(ManagedEndpoint endpoint, CancellationToken cancellationToken)
     {
         await hubContext.Clients.All.SendAsync(
             SecurityHubEvents.EndpointUpdated,
@@ -412,7 +413,7 @@ public sealed class WindowsIngestController(
     }
 
     private static Incident CreateIncident(
-        Endpoint endpoint,
+        ManagedEndpoint endpoint,
         string title,
         string description,
         IncidentSeverity severity,

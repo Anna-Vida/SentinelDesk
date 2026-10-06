@@ -7,7 +7,7 @@ public sealed class SentinelDeskDbContext(DbContextOptions<SentinelDeskDbContext
 {
     public DbSet<AppUser> Users => Set<AppUser>();
 
-    public DbSet<Endpoint> Endpoints => Set<Endpoint>();
+    public DbSet<SentinelDesk.Api.Models.Endpoint> Endpoints => Set<SentinelDesk.Api.Models.Endpoint>();
 
     public DbSet<Incident> Incidents => Set<Incident>();
 
@@ -30,7 +30,7 @@ public sealed class SentinelDeskDbContext(DbContextOptions<SentinelDeskDbContext
             entity.HasIndex(user => user.Email).IsUnique();
         });
 
-        modelBuilder.Entity<Endpoint>(entity =>
+        modelBuilder.Entity<SentinelDesk.Api.Models.Endpoint>(entity =>
         {
             entity.ToTable("Endpoints");
             entity.HasKey(endpoint => endpoint.Id);
