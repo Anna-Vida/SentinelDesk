@@ -23,6 +23,7 @@ export interface Incident {
   archivedAt: string | null
   createdAt: string
   updatedAt: string
+  endpointId: string | null
   assignedToUserId: string | null
   assignedToDisplayName: string | null
 }
@@ -60,7 +61,7 @@ export interface IncidentQuery {
 export type ConnectionState = 'Connected' | 'Reconnecting' | 'Disconnected'
 
 export interface RealtimeEvents {
-  IncidentCreated: IncidentInput & { id: string; status: IncidentStatus; createdAt: string }
+  IncidentCreated: IncidentInput & { id: string; status: IncidentStatus; createdAt: string; endpointId: string | null }
   IncidentUpdated: IncidentInput & { id: string; updatedAt: string; assignedToUserId: string | null; assignedToDisplayName: string | null }
   IncidentStatusChanged: { incidentId: string; previousStatus: IncidentStatus; newStatus: IncidentStatus; updatedAt: string }
   IncidentArchived: { incidentId: string; archivedAt: string }

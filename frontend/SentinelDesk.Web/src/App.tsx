@@ -55,7 +55,7 @@ export default function App() {
   const handleRealtime = useCallback((event: RealtimeEvent) => {
     setRevision((value) => value + 1)
     switch (event.name) {
-      case 'IncidentCreated': { const item: Incident = { ...event.payload, isArchived: false, archivedAt: null, updatedAt: event.payload.createdAt }; upsertIncident(item); setToast(`New incident: ${item.title}`); break }
+      case 'IncidentCreated': { const item: Incident = { ...event.payload, endpointId: event.payload.endpointId ?? null, assignedToUserId: null, assignedToDisplayName: null, isArchived: false, archivedAt: null, updatedAt: event.payload.createdAt }; upsertIncident(item); setToast(`New incident: ${item.title}`); break }
       case 'IncidentUpdated': setIncidents((current) => current.map((item) => item.id === event.payload.id ? { ...item, ...event.payload } : item)); setSelected((item) => item?.id === event.payload.id ? { ...item, ...event.payload } : item); break
       case 'IncidentStatusChanged': setIncidents((current) => current.map((item) => item.id === event.payload.incidentId ? { ...item, status: event.payload.newStatus, updatedAt: event.payload.updatedAt } : item)); setSelected((item) => item?.id === event.payload.incidentId ? { ...item, status: event.payload.newStatus, updatedAt: event.payload.updatedAt } : item); break
       case 'IncidentArchived': setIncidents((current) => current.filter((item) => item.id !== event.payload.incidentId)); setSelected((item) => item?.id === event.payload.incidentId ? null : item); break

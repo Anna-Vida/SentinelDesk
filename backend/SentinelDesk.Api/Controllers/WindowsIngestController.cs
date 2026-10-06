@@ -195,7 +195,8 @@ public sealed class WindowsIngestController(
                     incident.Description,
                     incident.Severity.ToString(),
                     incident.Status.ToString(),
-                    incident.CreatedAt),
+                    incident.CreatedAt,
+                    incident.EndpointId),
                 cancellationToken);
         }
 

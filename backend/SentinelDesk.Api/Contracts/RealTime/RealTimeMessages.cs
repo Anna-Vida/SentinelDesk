@@ -6,7 +6,8 @@ public sealed record IncidentCreatedMessage(
     string Description,
     string Severity,
     string Status,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    Guid? EndpointId = null
 );
 
 public sealed record IncidentUpdatedMessage(
